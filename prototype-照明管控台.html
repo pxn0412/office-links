@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>照明工程管控台 · 可点击原型(模拟数据)</title>
+<style>
+:root{--ac:#2563eb;--bg:#f5f6f8;--card:#fff;--bd:#e3e6ea;--tx:#1d2330;--mu:#6b7380;--ok:#15803d;--warn:#b45309;--bad:#c2410c;--red:#b91c1c}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.55 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--tx)}
+header{background:#fff;border-bottom:1px solid var(--bd);padding:10px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+header h1{font-size:16px;margin:0}
+.tag{font-size:12px;background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:10px}
+.roles{display:flex;gap:6px;margin-left:auto}
+button{font:inherit;cursor:pointer;border:1px solid var(--bd);background:#fff;padding:5px 12px;border-radius:6px;color:var(--tx)}
+button:hover{border-color:var(--ac)}
+button.pri{background:var(--ac);border-color:var(--ac);color:#fff}
+button.sel{background:var(--ac);color:#fff;border-color:var(--ac)}
+button.danger{color:var(--red)}
+button:disabled{opacity:.45;cursor:not-allowed;border-color:var(--bd)}
+.wrap{display:grid;grid-template-columns:1fr 340px;gap:16px;padding:16px 20px;max-width:1400px;margin:0 auto}
+@media(max-width:1000px){.wrap{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:14px 16px;margin-bottom:12px}
+.card h3{margin:0 0 8px;font-size:14px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sp{justify-content:space-between}
+.mu{color:var(--mu);font-size:13px}
+.nav{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;font-weight:600}
+.b-ok{background:#dcfce7;color:var(--ok)}.b-warn{background:#fef3c7;color:var(--warn)}.b-bad{background:#ffedd5;color:var(--bad)}.b-red{background:#fee2e2;color:var(--red)}.b-gray{background:#eef0f3;color:var(--mu)}.b-blue{background:#dbeafe;color:#1d4ed8}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--bd);vertical-align:top}
+th{font-size:12px;color:var(--mu);font-weight:600}
+.todo{padding:8px 10px;border:1px solid var(--bd);border-radius:6px;margin-bottom:6px;cursor:pointer;display:flex;justify-content:space-between;gap:8px}
+.todo:hover{border-color:var(--ac)}
+.notice{padding:8px 12px;border-radius:6px;margin-bottom:12px}
+.n-ok{background:#dcfce7;color:var(--ok)}.n-no{background:#fee2e2;color:var(--red)}
+input[type=text],input[type=number],select,textarea{font:inherit;padding:5px 8px;border:1px solid var(--bd);border-radius:6px;width:100%}
+label.opt{display:block;padding:8px 10px;border:1px solid var(--bd);border-radius:6px;margin-bottom:6px;cursor:pointer}
+.steps{display:flex;gap:4px;margin:8px 0}
+.steps span{flex:1;text-align:center;padding:4px;font-size:12px;background:#eef0f3;color:var(--mu);border-radius:4px}
+.steps span.on{background:var(--ac);color:#fff}.steps span.done{background:#dbeafe;color:#1d4ed8}
+.url{background:#eef0f3;border-radius:6px;padding:5px 10px;font-family:Consolas,monospace;font-size:12px;color:var(--mu);margin-bottom:10px}
+.phone{max-width:480px;margin:0 auto}
+.guide .step{padding:8px 10px;border:1px solid var(--bd);border-radius:6px;margin-bottom:6px}
+.guide .step.cur{border-color:var(--ac);background:#eff6ff}
+.guide .step.done{opacity:.55}
+.log li{margin-bottom:4px}
+ul{padding-left:18px;margin:4px 0}
+.lock{background:#fee2e2;border:1px solid #fecaca;border-radius:6px;padding:8px 10px;margin:8px 0;color:var(--red)}
+.intro{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 14px;margin:12px 20px 0;max-width:1360px;margin-left:auto;margin-right:auto}
+</style>
+</head>
+<body>
+<header>
+  <h1>照明工程管控台</h1>
+  <span class="tag">原型 · 全部为模拟数据 · 刷新即重置</span>
+  <div class="roles" id="roles"></div>
+</header>
+<div class="intro"><b>这个原型要回答的问题:</b>"事件 → 找出受影响对象 → 指派处理 → 对方确认 → 关闭并留痕"这套机制,在两个真实场景里顺不顺?
+右侧"演示向导"可以一步步带你走,也可以自己随便点。上方切换角色,看供应商、施工方、客户各自看到什么。</div>
+<div class="wrap">
+  <main id="main"></main>
+  <aside id="guide" class="guide"></aside>
+</div>
+
+<script>
+/* ======================================================================
+   纯逻辑模块(可以直接搬进正式代码):没有 DOM,输入 (state, action) → 新 state
+   ====================================================================== */
+const Logic = (() => {
+  const SAFETY = [
+    {key:'insurance', label:'保险生效'},
+    {key:'briefing',  label:'安全交底'},
+    {key:'gear',      label:'工人装备回传'},
+    {key:'contract',  label:'正规安装公司合同'}
+  ];
+  const RANK = {normal:0, at_risk:1, delayed:2, redline:3};
+  const PLANS = {
+    adjust_schedule:{label:'调整施工日期', desc:'安装等任务顺延到新到货日之后', party:'construction'},
+    switch_supplier:{label:'换备用供应商', desc:'改由备用供应商按原期到货', party:'supplier'},
+    talk_to_client:{label:'与客户沟通顺延', desc:'施工顺延,同时把到场款应收日一并顺延', party:'client'}
+  };
+
+  function initial(){
+    return {
+      seq:0, today:0, notice:null,
+      project:{name:'某酒店高空灯具改造(模拟)', owner:'某酒店(模拟)', decisionMaker:{name:'王总(模拟)', phone:'138-0000-0000'},
+               contract:500000, cost:380000, highAltitude:true, height:'8 米', credit:'正常'},
+      payments:[
+        {id:'p1', name:'定金', pct:30, due:-10, trigger:'contract', received:true},
+        {id:'p2', name:'到场款(累计至 80%)', pct:50, due:8, trigger:'arrival', received:false},
+        {id:'p3', name:'验收款', pct:10, due:20, trigger:'accept', received:false},
+        {id:'p4', name:'质保金', pct:10, due:120, trigger:'accept', received:false}
+      ],
+      orders:[{id:'o1', supplier:'A 灯具厂(模拟)', item:'LED 灯具 500 套', eta:5, pendingEta:0, shipClaim:false, arrival:'none'}],
+      tasks:[
+        {id:'t1', name:'到货核对', party:'施工方', start:5, end:5, status:'todo', dependsOrder:'o1'},
+        {id:'t2', name:'高空安装', party:'施工方', start:6, end:9, status:'todo', dependsOrder:'o1', dependsTask:'t1', requiresSafety:true, startRequested:false, started:false},
+        {id:'t3', name:'客户验收', party:'客户', start:10, end:10, status:'todo', dependsTask:'t2'}
+      ],
+      safety:SAFETY.map(x => ({key:x.key, label:x.label, claim:x.key==='insurance'?'confirmed':'none', evidence:x.key==='insurance'?'保单.pdf(模拟)':'', rejectReason:'', by:x.key==='insurance'?'负责人':''})),
+      incidents:[],
+      links:[
+        {token:'S-1', kind:'delay_report', party:'supplier', ref:'o1', label:'订单交期反馈', status:'open'},
+        {token:'C-1', kind:'arrival_claim', party:'construction', ref:'o1', label:'到货核对', status:'open'}
+      ],
+      log:[]
+    };
+  }
+
+  const byId = (arr,id) => arr.find(x => x.id === id);
+  const effEta = o => Math.max(o.eta, o.pendingEta || 0);
+  const openDelay = (s,orderId) => s.incidents.find(i => i.orderId === orderId && i.status !== 'closed');
+  const missingSafety = s => s.safety.filter(x => x.claim !== 'confirmed');
+
+  function taskRisk(s,t){
+    if (t.status === 'done') return {level:'normal', reasons:[]};
+    let level = 'normal'; const reasons = [];
+    const up = l => { if (RANK[l] > RANK[level]) level = l; };
+    if (t.dependsOrder){
+      const o = byId(s.orders, t.dependsOrder);
+      if (o.arrival !== 'confirmed'){
+        const eta = effEta(o);
+        if (eta > t.start){ up('delayed'); reasons.push(`订单预计第 ${eta} 天到货,晚于计划开始日第 ${t.start} 天`); }
+        else if (openDelay(s,o.id)){ up('at_risk'); reasons.push('关联订单有未关闭的异常'); }
+      }
+    }
+    if (t.requiresSafety && t.startRequested && !t.started){
+      const m = missingSafety(s);
+      if (m.length){ up('redline'); reasons.push('安全卡未齐,缺:' + m.map(x => x.label).join('、')); }
+    }
+    return {level, reasons};
+  }
+  function projectRisk(s){
+    return s.tasks.reduce((l,t) => RANK[taskRisk(s,t).level] > RANK[l] ? taskRisk(s,t).level : l, 'normal');
+  }
+  function affected(s, inc){
+    const o = byId(s.orders, inc.orderId);
+    return {
+      tasks: s.tasks.filter(t => t.dependsOrder === inc.orderId),
+      payments: s.payments.filter(p => p.trigger === 'arrival' && !p.received).map(p => ({p, late: inc.newEta > p.due}))
+    };
+  }
+  function payState(s,p){
+    if (p.received) return '已收';
+    if (p.trigger === 'arrival') return byId(s.orders,'o1').arrival === 'confirmed' ? '可催收' : '未触发(待到货确认)';
+    return '未触发(待验收)';
+  }
+
+  function log(s, actor, text){ s.log.push({n:s.log.length+1, day:s.today, actor, text}); }
+  function newLink(s, kind, party, ref, label){
+    const token = 'L-' + (++s.seq);
+    s.links.push({token, kind, party, ref, label, status:'open'});
+    return token;
+  }
+  function useLink(s, token){ const l = s.links.find(x => x.token === token); if (l) l.status = 'used'; return l; }
+  function shift(s, taskId, delta, seen){
+    if (seen.has(taskId)) return; seen.add(taskId);
+    const t = byId(s.tasks, taskId); t.start += delta; t.end += delta;
+    s.tasks.filter(x => x.dependsTask === taskId).forEach(x => shift(s, x.id, delta, seen));
+  }
+  const no = (s,text) => { s.notice = {ok:false, text}; return s; };
+  const yes = (s,text) => { s.notice = {ok:true, text}; return s; };
+
+  function reduce(prev, a){
+    const s = structuredClone(prev); s.notice = null;
+    switch (a.type){
+
+      case 'CLAIM_SHIP': {
+        const o = byId(s.orders, a.orderId); o.shipClaim = true;
+        log(s, a.actor, `声称订单已发货(仅供参考,不代表到货)`);
+        return yes(s, '已记录"已发货"。注意:发货不等于到货。');
+      }
+      case 'CLAIM_ARRIVAL': {
+        const o = byId(s.orders, a.orderId); o.arrival = 'claimed';
+        if (a.token) useLink(s, a.token);
+        log(s, a.actor, `声称货物已到现场,等待负责人核对确认`);
+        return yes(s, '已提交"已到货",等待负责人核对。');
+      }
+      case 'CONFIRM_ARRIVAL': {
+        const o = byId(s.orders, a.orderId);
+        if (o.arrival !== 'claimed') return no(s, '还没有人声称到货,无法确认。');
+        o.arrival = 'confirmed'; o.eta = Math.min(o.eta, s.today);
+        log(s, '负责人', `核对数量型号无误,确认到货。到场款进入可催收`);
+        return yes(s, '已确认到货。"到场款"变为可催收。');
+      }
+
+      /* ---- 闭环 A ---- */
+      case 'REPORT_DELAY': {
+        const o = byId(s.orders, a.orderId);
+        if (o.arrival === 'confirmed') return no(s, '这批货已确认到货,不能再报延期。');
+        if (openDelay(s,o.id)) return no(s, '这个订单已有未关闭的延期异常。');
+        if (!(a.newEta > o.eta)) return no(s, `新交期必须晚于原交期(第 ${o.eta} 天)。`);
+        if (!a.reason || !a.reason.trim()) return no(s, '请填写延期原因。');
+        o.pendingEta = a.newEta;
+        const inc = {id:'I' + (s.incidents.length+1), type:'采购延期', title:`${o.supplier} 订单延期`, orderId:o.id,
+                     newEta:a.newEta, reason:a.reason.trim(), reportedBy:a.actor, status:'new',
+                     plan:null, assignee:null, partyClaim:'none', partyNote:'', confirmToken:null};
+        s.incidents.push(inc);
+        if (a.token) useLink(s, a.token);
+        const af = affected(s, inc);
+        log(s, a.actor, `报告延期:预计第 ${o.eta} 天 → 第 ${a.newEta} 天,原因:${inc.reason}`);
+        log(s, '系统', `创建异常 ${inc.id};标记 ${af.tasks.length} 个关联任务,${af.payments.length} 个收款节点受影响`);
+        return yes(s, `已创建异常 ${inc.id}。系统已找出受影响的任务和收款节点。`);
+      }
+      case 'SET_PLAN': {
+        const inc = byId(s.incidents, a.incidentId);
+        if (!inc || inc.status === 'closed') return no(s, '异常不存在或已关闭。');
+        if (!PLANS[a.plan]) return no(s, '请先选择一个处理方案。');
+        inc.plan = a.plan; inc.assignee = a.assignee; inc.partyClaim = 'none'; inc.partyNote = '';
+        if (inc.confirmToken) useLink(s, inc.confirmToken);
+        inc.confirmToken = newLink(s, 'confirm_plan', PLANS[a.plan].party, inc.id, `确认处理方案:${PLANS[a.plan].label}`);
+        inc.status = 'awaiting';
+        log(s, '负责人', `选择方案「${PLANS[a.plan].label}」,处理人:${a.assignee}`);
+        log(s, '系统', `已为${partyName(PLANS[a.plan].party)}生成确认链接 ${inc.confirmToken}`);
+        return yes(s, `方案已指派,已给${partyName(PLANS[a.plan].party)}生成确认链接。`);
+      }
+      case 'PARTY_CONFIRM_PLAN': {
+        const inc = byId(s.incidents, a.incidentId);
+        useLink(s, a.token);
+        if (a.accept){
+          inc.partyClaim = 'claimed';
+          log(s, partyName(PLANS[inc.plan].party), `确认方案「${PLANS[inc.plan].label}」(已声称,待负责人核实)`);
+          return yes(s, '已确认,等待负责人核实关闭。');
+        }
+        inc.partyClaim = 'rejected'; inc.partyNote = a.note || '(未写原因)'; inc.status = 'assigned';
+        log(s, partyName(PLANS[inc.plan].party), `对方案提出异议:${inc.partyNote}`);
+        return yes(s, '已提交异议,负责人会重新处理。');
+      }
+      case 'CLOSE_INCIDENT': {
+        const inc = byId(s.incidents, a.incidentId);
+        if (inc.partyClaim !== 'claimed') return no(s, '对方还没有确认方案,不能关闭。');
+        const o = byId(s.orders, inc.orderId);
+        if (inc.plan === 'switch_supplier'){
+          o.supplier = '备用供应商 C(模拟)'; o.eta = 5; o.pendingEta = 0;
+        } else {
+          o.eta = o.pendingEta; o.pendingEta = 0;
+          const seen = new Set();
+          s.tasks.filter(t => t.dependsOrder === o.id).forEach(t => {
+            if (o.eta > t.start) shift(s, t.id, o.eta - t.start, seen);
+          });
+          if (inc.plan === 'talk_to_client'){
+            s.payments.filter(p => p.trigger === 'arrival' && !p.received).forEach(p => { if (o.eta > p.due) p.due = o.eta + 3; });
+          }
+        }
+        inc.status = 'closed';
+        log(s, '负责人', `核实并关闭异常 ${inc.id}。任务与订单已按方案更新`);
+        return yes(s, '异常已关闭,任务排期已更新。');
+      }
+
+      /* ---- 闭环 B ---- */
+      case 'REQUEST_START': {
+        const t = byId(s.tasks, a.taskId); t.startRequested = true;
+        const m = missingSafety(s);
+        if (!m.length){ log(s, '负责人', `申请开工「${t.name}」:安全卡已齐`); return yes(s, '安全卡四项已齐,可以授权开工。'); }
+        m.forEach(x => {
+          if (x.key === 'contract') return;
+          const exists = s.links.some(l => l.kind === 'safety_evidence' && l.ref === x.key && l.status === 'open');
+          if (x.claim === 'none' && !exists) newLink(s, 'safety_evidence', 'construction', x.key, `补交安全凭证:${x.label}`);
+        });
+        log(s, '负责人', `申请开工「${t.name}」`);
+        log(s, '系统', `开工被锁定(红线),缺:${m.map(x => x.label).join('、')};已向施工方发出补交链接`);
+        return no(s, `不能开工。安全卡缺:${m.map(x => x.label).join('、')}`);
+      }
+      case 'SUBMIT_EVIDENCE': {
+        const it = byId2(s.safety, a.key);
+        if (!a.evidence || !a.evidence.trim()) return no(s, '请上传或填写凭证。');
+        it.claim = 'claimed'; it.evidence = a.evidence.trim(); it.rejectReason = ''; it.by = a.actor;
+        if (a.token) useLink(s, a.token);
+        log(s, a.actor, `提交「${it.label}」凭证:${it.evidence}(已声称,待审核)`);
+        return yes(s, '凭证已提交,等待负责人审核。');
+      }
+      case 'REVIEW_SAFETY': {
+        const it = byId2(s.safety, a.key);
+        if (it.claim !== 'claimed') return no(s, '这一项还没有待审核的凭证。');
+        if (a.approve){
+          it.claim = 'confirmed';
+          log(s, '负责人', `审核通过「${it.label}」`);
+          if (!missingSafety(s).length) log(s, '系统', '安全卡四项全部已确认,红线解除,可以授权开工');
+          return yes(s, `「${it.label}」已确认。`);
+        }
+        if (!a.reason || !a.reason.trim()) return no(s, '驳回必须写明原因。');
+        it.claim = 'rejected'; it.rejectReason = a.reason.trim();
+        if (it.key !== 'contract') newLink(s, 'safety_evidence', 'construction', it.key, `重新提交:${it.label}`);
+        log(s, '负责人', `驳回「${it.label}」:${it.rejectReason}`);
+        return yes(s, `已驳回「${it.label}」,并通知施工方重新提交。`);
+      }
+      case 'GRANT_START': {
+        const t = byId(s.tasks, a.taskId);
+        if (missingSafety(s).length) return no(s, '安全卡未齐,不能授权开工。');
+        t.started = true; t.status = 'doing';
+        log(s, '负责人', `授权开工「${t.name}」`);
+        return yes(s, '已授权开工。');
+      }
+      default: return s;
+    }
+  }
+  const byId2 = (arr,key) => arr.find(x => x.key === key);
+  function partyName(p){ return {construction:'施工方', supplier:'供应商', client:'客户', owner:'负责人'}[p]; }
+
+  return {initial, reduce, taskRisk, projectRisk, affected, payState, missingSafety, openDelay, effEta, PLANS, SAFETY, partyName, byId};
+})();
+
+/* ======================================================================
+   页面壳(一次性,可丢弃)
+   ====================================================================== */
+let S = Logic.initial();
+const ui = {role:'owner', page:'overview', tab:'tasks', incId:null, token:null, scen:'A', step:0};
+const $ = id => document.getElementById(id);
+const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const val = id => { const e = $(id); return e ? e.value : ''; };
+const ROLES = {owner:'负责人', supplier:'供应商', construction:'施工方', client:'客户'};
+const RB = {normal:['正常','b-ok'], at_risk:['有风险','b-warn'], delayed:['已延误','b-bad'], redline:['红线 · 禁止开工','b-red']};
+const INC_STEPS = [['new','新建'],['assigned','已指派'],['awaiting','待对方确认'],['closed','已关闭']];
+const CLAIM = {none:['未提交','b-gray'], claimed:['已声称·待审核','b-blue'], confirmed:['已确认','b-ok'], rejected:['已驳回','b-red']};
+const badge = (l) => `<span class="badge ${RB[l][1]}">${RB[l][0]}</span>`;
+const money = n => '¥' + n.toLocaleString();
+
+function D(action){ S = Logic.reduce(S, action); }
+function findLink(kind, ref, party){ return S.links.find(l => l.kind === kind && l.ref === ref && l.status === 'open' && (!party || l.party === party)); }
+
+/* ---------- 负责人页面 ---------- */
+function ownerNav(){
+  const items = [['overview','P1 项目总览'],['workspace','P2 项目工作台'],['incident','P3 异常处理']];
+  return `<div class="nav">${items.map(([k,l]) => `<button class="${ui.page===k?'sel':''}" data-act="nav" data-page="${k}">${l}</button>`).join('')}</div>`;
+}
+
+function todos(){
+  const list = [];
+  S.incidents.filter(i => i.status !== 'closed').forEach(i => {
+    const hint = i.partyClaim === 'claimed' ? '对方已确认,等你核实关闭' : i.status === 'new' ? '待你选方案' : i.status === 'awaiting' ? '等待对方确认' : '待你重新处理';
+    list.push({t:`异常 ${i.id}:${i.title}`, h:hint, go:{page:'incident', incId:i.id}, hot:i.status==='new'||i.partyClaim==='claimed'||i.status==='assigned'});
+  });
+  S.safety.filter(x => x.claim === 'claimed').forEach(x => list.push({t:`待审核凭证:${x.label}`, h:'施工方已提交', go:{page:'workspace', tab:'safety'}, hot:true}));
+  S.orders.filter(o => o.arrival === 'claimed').forEach(o => list.push({t:`待确认到货:${o.item}`, h:'对方已声称到货', go:{page:'workspace', tab:'orders'}, hot:true}));
+  const t2 = S.tasks.find(t => t.requiresSafety);
+  if (t2.startRequested && !t2.started && !Logic.missingSafety(S).length) list.push({t:`安全卡已齐:可授权「${t2.name}」开工`, h:'', go:{page:'workspace', tab:'tasks'}, hot:true});
+  return list;
+}
+
+function pOverview(){
+  const p = S.project, risk = Logic.projectRisk(S), td = todos();
+  const nextPay = S.payments.filter(x => !x.received)[0];
+  const open = S.links.filter(l => l.status === 'open' && l.kind !== 'delay_report' && l.kind !== 'arrival_claim').length;
+  return `
+  <div class="row" style="margin-bottom:12px">
+    <div class="card" style="flex:1;min-width:140px"><div class="mu">项目数</div><b style="font-size:22px">1</b></div>
+    <div class="card" style="flex:1;min-width:140px"><div class="mu">未关闭异常</div><b style="font-size:22px">${S.incidents.filter(i=>i.status!=='closed').length}</b></div>
+    <div class="card" style="flex:1;min-width:140px"><div class="mu">待你处理</div><b style="font-size:22px">${td.filter(x=>x.hot).length}</b></div>
+    <div class="card" style="flex:1;min-width:140px"><div class="mu">已发出未回应链接</div><b style="font-size:22px">${open}</b></div>
+  </div>
+  <div class="card">
+    <div class="row sp"><h3 style="margin:0">${esc(p.name)}</h3>${badge(risk)}</div>
+    <div class="mu">业主:${esc(p.owner)} · 合同 ${money(p.contract)} · 高空 ${p.height}</div>
+    <div class="mu">下一笔收款:${nextPay.name} ${money(p.contract*nextPay.pct/100)},应收日第 ${nextPay.due} 天,${Logic.payState(S,nextPay)}</div>
+    <div style="margin-top:8px"><button class="pri" data-act="nav" data-page="workspace">进入项目工作台</button></div>
+  </div>
+  <div class="card"><h3>待办与待确认</h3>
+    ${td.length ? td.map((x,i) => `<div class="todo" data-act="todo" data-i="${i}"><span>${esc(x.t)}${x.hot?' <span class="badge b-red">需要你</span>':''}</span><span class="mu">${esc(x.h)}</span></div>`).join('') : '<div class="mu">暂时没有待办。</div>'}
+  </div>`;
+}
+
+function pWorkspace(){
+  const p = S.project;
+  const tabs = [['tasks','任务'],['orders','采购订单'],['pay','付款节点'],['safety','安全卡'],['inc','异常'],['log','日志']];
+  let body = '';
+  if (ui.tab === 'tasks'){
+    const t2 = S.tasks.find(t => t.requiresSafety), miss = Logic.missingSafety(S);
+    body = `<table><tr><th>任务</th><th>负责方</th><th>计划</th><th>状态</th><th>风险</th></tr>` +
+      S.tasks.map(t => { const r = Logic.taskRisk(S,t);
+        return `<tr><td>${t.name}</td><td>${t.party}</td><td>第 ${t.start}${t.end!==t.start?'–'+t.end:''} 天</td><td>${{todo:'未开始',doing:'进行中',done:'已完成'}[t.status]}</td><td>${badge(r.level)}${r.reasons.map(x=>`<div class="mu">${esc(x)}</div>`).join('')}</td></tr>`; }).join('') + `</table>
+      <div class="card" style="margin-top:12px"><h3>高空安装 · 开工控制</h3>` +
+      (t2.started ? '<span class="badge b-ok">已授权开工</span>' :
+       !t2.startRequested ? `<button class="pri" data-act="reqstart">申请开工</button><span class="mu"> 点击后系统会检查安全卡</span>` :
+       miss.length ? `<div class="lock"><b>开工已锁定。</b>安全卡缺:${miss.map(x=>esc(x.label)).join('、')}。<br>已向施工方发出补交链接,请到"安全卡"页签审核凭证。</div><button disabled>授权开工(已锁定)</button>` :
+       `<div class="notice n-ok">安全卡四项全部已确认,红线解除。</div><button class="pri" data-act="grant">授权开工</button>`) + `</div>`;
+  }
+  if (ui.tab === 'orders'){
+    const o = S.orders[0], inc = Logic.openDelay(S,o.id);
+    body = `<table><tr><th>供应商</th><th>内容</th><th>预计到货</th><th>发货(声称)</th><th>到货</th></tr>
+      <tr><td>${esc(o.supplier)}</td><td>${o.item}</td><td>第 ${o.eta} 天${o.pendingEta?` <span class="badge b-bad">供应商报延至第 ${o.pendingEta} 天</span>`:''}</td>
+      <td>${o.shipClaim?'已发货(参考)':'—'}</td>
+      <td><span class="badge ${{none:'b-gray',claimed:'b-blue',confirmed:'b-ok'}[o.arrival]}">${{none:'未到',claimed:'已声称·待核对',confirmed:'已确认'}[o.arrival]}</span></td></tr></table>
+      <div class="row" style="margin-top:10px">${o.arrival==='claimed'?`<button class="pri" data-act="confirmarr">核对无误,确认到货</button>`:''}</div>
+      ${o.arrival!=='confirmed' && !inc ? `<div class="card" style="margin-top:12px"><h3>代录延期(供应商不用系统时由你代录)</h3>
+        <div class="row"><div style="width:140px"><input type="number" id="f-eta" placeholder="新到货日(天)" value="12"></div>
+        <div style="flex:1"><input type="text" id="f-reason" placeholder="延期原因" value="工厂排产延误"></div>
+        <button data-act="ownerdelay">代录延期</button></div></div>` : ''}`;
+  }
+  if (ui.tab === 'pay'){
+    body = `<table><tr><th>节点</th><th>比例</th><th>金额</th><th>应收日</th><th>状态</th></tr>` +
+      S.payments.map(x => `<tr><td>${x.name}</td><td>${x.pct}%</td><td>${money(p.contract*x.pct/100)}</td><td>第 ${x.due} 天</td><td>${Logic.payState(S,x)}</td></tr>`).join('') + `</table>
+      <div class="mu" style="margin-top:8px">催款对象:<b>决策领导 ${esc(p.decisionMaker.name)} ${esc(p.decisionMaker.phone)}</b>(不催业务员)</div>
+      <div class="mu">成本 ${money(p.cost)} · 客户信用标签:${p.credit}(仅负责人可见)</div>`;
+  }
+  if (ui.tab === 'safety'){
+    const miss = Logic.missingSafety(S);
+    body = `<div class="mu" style="margin-bottom:8px">规则:四项全部"已确认"才允许开工。对方提交只算"已声称",要你审核才算数。</div>
+    <table><tr><th>项目</th><th>状态</th><th>凭证</th><th>操作</th></tr>` +
+    S.safety.map(x => `<tr><td>${x.label}</td><td><span class="badge ${CLAIM[x.claim][1]}">${CLAIM[x.claim][0]}</span>${x.rejectReason?`<div class="mu">驳回原因:${esc(x.rejectReason)}</div>`:''}</td><td>${esc(x.evidence)||'—'}</td><td>` +
+      (x.claim === 'claimed' ? `<input type="text" id="rj-${x.key}" placeholder="驳回原因(驳回时必填)" style="margin-bottom:4px"><div class="row"><button class="pri" data-act="approve" data-key="${x.key}">通过</button><button class="danger" data-act="reject" data-key="${x.key}">驳回</button></div>` :
+       x.key === 'contract' && x.claim !== 'confirmed' ? `<div class="row"><input type="text" id="own-${x.key}" value="安装合同.pdf(模拟)" style="width:170px"><button data-act="ownsubmit" data-key="${x.key}">我来上传</button></div>` : '') + `</td></tr>`).join('') + `</table>
+    <div style="margin-top:8px">${miss.length ? `<span class="badge b-red">缺 ${miss.length} 项</span>` : '<span class="badge b-ok">四项齐全</span>'}</div>`;
+  }
+  if (ui.tab === 'inc'){
+    body = S.incidents.length ? `<table><tr><th>编号</th><th>异常</th><th>状态</th><th></th></tr>` + S.incidents.map(i => `<tr><td>${i.id}</td><td>${esc(i.title)}</td><td>${INC_STEPS.find(x=>x[0]===i.status)[1]}</td><td><button data-act="openinc" data-id="${i.id}">处理</button></td></tr>`).join('') + `</table>` : '<div class="mu">暂无异常。</div>';
+  }
+  if (ui.tab === 'log'){
+    body = S.log.length ? `<ul class="log" style="list-style:none;padding:0">` + S.log.slice().reverse().map(l => `<li><span class="mu">#${l.n} 第${l.day}天</span> <b>${esc(l.actor)}</b>:${esc(l.text)}</li>`).join('') + `</ul>` : '<div class="mu">还没有操作记录。日志只增不改。</div>';
+  }
+  return `<div class="card"><div class="row sp"><h3 style="margin:0">${esc(p.name)}</h3>${badge(Logic.projectRisk(S))}</div>
+    <div class="mu">决策领导:${esc(p.decisionMaker.name)} · 合同 ${money(p.contract)}</div></div>
+    <div class="nav">${tabs.map(([k,l]) => `<button class="${ui.tab===k?'sel':''}" data-act="tab" data-tab="${k}">${l}</button>`).join('')}</div>
+    <div class="card">${body}</div>`;
+}
+
+function pIncident(){
+  const inc = S.incidents.find(i => i.id === ui.incId) || S.incidents.filter(i => i.status!=='closed')[0] || S.incidents[0];
+  if (!inc) return '<div class="card mu">还没有异常。请先让供应商报延期,或在"项目工作台 → 采购订单"代录。</div>';
+  const af = Logic.affected(S, inc), o = Logic.byId(S.orders, inc.orderId);
+  const idx = INC_STEPS.findIndex(x => x[0] === inc.status);
+  const canPlan = inc.status !== 'closed';
+  return `<div class="card"><div class="row sp"><h3 style="margin:0">${inc.id} · ${esc(inc.title)}</h3><span class="badge b-gray">${inc.type}</span></div>
+    <div class="steps">${INC_STEPS.map((x,i) => `<span class="${i===idx?'on':i<idx?'done':''}">${x[1]}</span>`).join('')}</div>
+    <div>原因:${esc(inc.reason)}(${esc(inc.reportedBy)}报告)</div>
+    <div>交期:第 ${o.eta} 天 → <b>第 ${inc.newEta} 天</b>${inc.status==='closed'?'(已按方案更新)':''}</div></div>
+  <div class="card"><h3>系统找出的影响范围</h3>
+    <b>受影响任务</b>
+    <ul>${af.tasks.map(t => { const r = Logic.taskRisk(S,t); return `<li>${t.name}(第 ${t.start} 天开始)${badge(r.level)}</li>`; }).join('')}</ul>
+    <b>受影响收款节点</b>
+    <ul>${af.payments.map(x => `<li>${x.p.name}:应收日第 ${x.p.due} 天${x.late?` <span class="badge b-bad">新到货日晚于应收日,可能无法按期催收</span>`:''}</li>`).join('') || '<li>无</li>'}</ul></div>
+  ${canPlan ? `<div class="card"><h3>处理方案与指派</h3>
+    ${Object.entries(Logic.PLANS).map(([k,v]) => `<label class="opt"><input type="radio" name="plan" value="${k}" ${inc.plan===k?'checked':''}> <b>${v.label}</b> <span class="mu">${v.desc}。需${Logic.partyName(v.party)}确认</span></label>`).join('')}
+    <div class="row" style="margin:8px 0"><span class="mu">处理人</span><div style="width:180px"><select id="f-assignee"><option>负责人(本人)</option><option>采购专员</option><option>项目经理</option></select></div>
+    <button class="pri" data-act="setplan" data-id="${inc.id}">${inc.plan?'重新指派并发出链接':'指派并发出确认链接'}</button></div>
+    ${inc.plan ? `<div class="mu">当前方案:${Logic.PLANS[inc.plan].label} · 处理人:${esc(inc.assignee)} · 对方状态:${{none:'尚未回应',claimed:'已确认(待你核实)',rejected:'提出异议:'+esc(inc.partyNote)}[inc.partyClaim]}</div>` : ''}
+    <div style="margin-top:8px"><button class="pri" data-act="closeinc" data-id="${inc.id}" ${inc.partyClaim==='claimed'?'':'disabled'}>核实无误,关闭异常</button>
+    ${inc.partyClaim!=='claimed'?'<span class="mu"> 对方确认后才能关闭</span>':''}</div></div>` : '<div class="notice n-ok">异常已关闭,完整过程见"工作台 → 日志"。</div>'}`;
+}
+
+/* ---------- 外部协作方页面(P4) ---------- */
+function pExternal(){
+  const role = ui.role;
+  const mine = S.links.filter(l => l.party === role);
+  if (ui.token){
+    const l = S.links.find(x => x.token === ui.token);
+    if (l) return pLink(l);
+  }
+  const open = mine.filter(l => l.status === 'open'), used = mine.filter(l => l.status !== 'open');
+  return `<div class="phone"><div class="card"><h3>${ROLES[role]} · 收到的链接(模拟微信消息)</h3>
+    <div class="mu" style="margin-bottom:8px">现实中是负责人把链接发到微信,对方点开即用,不用注册账号。</div>
+    ${open.length ? open.map(l => `<div class="todo" data-act="openlink" data-token="${l.token}"><span>${esc(l.label)}</span><span class="badge b-blue">点击打开</span></div>`).join('') : '<div class="mu">暂时没有需要你处理的事项。</div>'}
+    ${used.length ? `<div class="mu" style="margin-top:8px">已处理 ${used.length} 项(链接用过即失效)</div>` : ''}
+    </div>${role==='client' ? clientView() : ''}</div>`;
+}
+function clientView(){
+  return `<div class="card"><h3>我的项目 · 付款节点</h3><table><tr><th>节点</th><th>金额</th><th>应付日</th></tr>` +
+    S.payments.map(x => `<tr><td>${x.name}</td><td>${money(S.project.contract*x.pct/100)}</td><td>第 ${x.due} 天</td></tr>`).join('') +
+    `</table><div class="mu" style="margin-top:6px">客户看不到成本、利润和信用标签。</div></div>`;
+}
+function pLink(l){
+  const head = `<div class="phone"><div class="url">https://demo.local/t/${l.token}</div><div class="card"><h3>${esc(l.label)}</h3>`;
+  const back = `<div style="margin-top:10px"><button data-act="closelink">返回</button></div></div></div>`;
+  if (l.status !== 'open') return head + '<div class="notice n-no">该链接已失效(已使用或已被替换)。</div>' + back;
+  const o = S.orders[0];
+  if (l.kind === 'delay_report'){
+    return head + `<div class="mu">订单:${o.item} · 原预计第 ${o.eta} 天到货</div>
+      <div style="margin:8px 0"><label class="mu">新预计到货日(第几天)</label><input type="number" id="f-eta" value="12"></div>
+      <div style="margin:8px 0"><label class="mu">原因</label><input type="text" id="f-reason" value="工厂排产延误"></div>
+      <div class="row"><button class="pri" data-act="extdelay" data-token="${l.token}">提交延期</button><button data-act="ship">声称"已发货"</button></div>
+      <div class="mu" style="margin-top:6px">你提交的内容属于"声称",负责人确认后才作数。${o.shipClaim?'<br>已记录发货。':''}</div>` + back;
+  }
+  if (l.kind === 'arrival_claim'){
+    return head + `<div class="mu">货物:${o.item}</div><div style="margin:8px 0">货到现场了吗?请核对数量和型号后提交。</div>
+      <button class="pri" data-act="claimarr" data-token="${l.token}">我已到场核对,货已到</button>
+      <div class="mu" style="margin-top:6px">这是"声称",负责人确认后才触发到场款。</div>` + back;
+  }
+  if (l.kind === 'confirm_plan'){
+    const inc = S.incidents.find(i => i.id === l.ref), pl = Logic.PLANS[inc.plan], eta = inc.newEta;
+    const tasks = S.tasks.filter(t => t.dependsOrder === inc.orderId);
+    return head + `<div>${esc(inc.title)}:预计第 ${eta} 天到货(原因:${esc(inc.reason)})</div>
+      <div class="lock" style="background:#eff6ff;border-color:#bfdbfe;color:var(--tx)"><b>处理方案:${pl.label}</b><br>${pl.desc}<br>涉及:${tasks.map(t => t.name).join('、')}</div>
+      <input type="text" id="f-note" placeholder="如有异议,写原因" style="margin-bottom:8px">
+      <div class="row"><button class="pri" data-act="confirmplan" data-token="${l.token}" data-id="${inc.id}">确认</button><button class="danger" data-act="denyplan" data-token="${l.token}" data-id="${inc.id}">有异议</button></div>` + back;
+  }
+  if (l.kind === 'safety_evidence'){
+    const it = S.safety.find(x => x.key === l.ref);
+    return head + `<div>开工前必须提交:<b>${it.label}</b></div>
+      ${it.rejectReason ? `<div class="notice n-no">上次被驳回:${esc(it.rejectReason)}</div>` : ''}
+      <div style="margin:8px 0"><input type="text" id="f-evidence" value="${it.label}凭证.jpg(模拟)"></div>
+      <button class="pri" data-act="submitev" data-token="${l.token}" data-key="${it.key}">上传凭证</button>
+      <div class="mu" style="margin-top:6px">提交后由负责人审核,通过才算数。</div>` + back;
+  }
+  return head + back;
+}
+
+/* ---------- 演示向导 ---------- */
+const GO = (role, page, extra) => Object.assign(ui, {role, page, token:null}, extra || {});
+const SCEN = {
+  A:{title:'场景 A:供应商延期', steps:[
+    {t:'供应商打开链接,报告延期:第 12 天到货。', who:'供应商', run:() => { D({type:'REPORT_DELAY', orderId:'o1', newEta:12, reason:'工厂排产延误', actor:'供应商', token:'S-1'}); GO('owner','overview'); }},
+    {t:'负责人在总览看到新异常,打开后看到系统找出的受影响任务和收款节点。', who:'负责人', run:() => GO('owner','incident',{incId:'I1'})},
+    {t:'负责人选"调整施工日期",指派处理人,发出确认链接。', who:'负责人', run:() => { D({type:'SET_PLAN', incidentId:'I1', plan:'adjust_schedule', assignee:'负责人(本人)'}); GO('construction','inbox'); }},
+    {t:'施工方打开链接,确认新排期。', who:'施工方', run:() => { const l = findLink('confirm_plan','I1'); D({type:'PARTY_CONFIRM_PLAN', incidentId:'I1', token:l.token, accept:true}); GO('owner','incident',{incId:'I1'}); }},
+    {t:'负责人核实,关闭异常。任务排期自动更新。', who:'负责人', run:() => { D({type:'CLOSE_INCIDENT', incidentId:'I1'}); GO('owner','workspace',{tab:'tasks'}); }},
+    {t:'打开"日志"页签,完整过程可追溯。', who:'负责人', run:() => GO('owner','workspace',{tab:'log'})}
+  ]},
+  B:{title:'场景 B:安全卡拦截开工', steps:[
+    {t:'负责人在工作台点"申请开工",被锁定并显示缺哪几项。', who:'负责人', run:() => { D({type:'REQUEST_START', taskId:'t2'}); GO('owner','workspace',{tab:'tasks'}); }},
+    {t:'施工方打开补交链接,上传"安全交底"和"装备回传"。', who:'施工方', run:() => { ['briefing','gear'].forEach(k => { const l = findLink('safety_evidence',k); D({type:'SUBMIT_EVIDENCE', key:k, evidence:(k==='gear'?'装备照片(模糊).jpg':'交底签字表.jpg'), actor:'施工方', token:l.token}); }); GO('owner','workspace',{tab:'safety'}); }},
+    {t:'负责人审核:交底通过,装备照片不清晰,驳回。', who:'负责人', run:() => { D({type:'REVIEW_SAFETY', key:'briefing', approve:true}); D({type:'REVIEW_SAFETY', key:'gear', approve:false, reason:'照片不清晰,请重拍'}); GO('construction','inbox'); }},
+    {t:'施工方收到重新提交链接,重传装备照片。', who:'施工方', run:() => { const l = findLink('safety_evidence','gear'); D({type:'SUBMIT_EVIDENCE', key:'gear', evidence:'装备照片(清晰).jpg', actor:'施工方', token:l.token}); GO('owner','workspace',{tab:'safety'}); }},
+    {t:'负责人通过装备,并自己上传安装公司合同。', who:'负责人', run:() => { D({type:'REVIEW_SAFETY', key:'gear', approve:true}); D({type:'SUBMIT_EVIDENCE', key:'contract', evidence:'安装合同.pdf(模拟)', actor:'负责人'}); D({type:'REVIEW_SAFETY', key:'contract', approve:true}); GO('owner','workspace',{tab:'tasks'}); }},
+    {t:'四项全绿,红线解除,负责人授权开工。', who:'负责人', run:() => { D({type:'GRANT_START', taskId:'t2'}); GO('owner','workspace',{tab:'log'}); }}
+  ]}
+};
+function renderGuide(){
+  const sc = SCEN[ui.scen];
+  $('guide').innerHTML = `<div class="card"><h3>演示向导</h3>
+    <div class="nav">${Object.entries(SCEN).map(([k,v]) => `<button class="${ui.scen===k?'sel':''}" data-act="scen" data-k="${k}">${v.title}</button>`).join('')}</div>
+    <button class="pri" data-act="restart" style="margin-bottom:10px">重置并开始此场景</button>
+    ${sc.steps.map((s,i) => `<div class="step ${i===ui.step?'cur':i<ui.step?'done':''}"><div><b>${i+1}.</b> <span class="badge b-gray">${s.who}</span> ${s.t}</div>
+      ${i===ui.step ? `<button data-act="runstep" style="margin-top:6px">替我点这一步</button>` : ''}</div>`).join('')}
+    ${ui.step >= sc.steps.length ? '<div class="notice n-ok">这个场景走完了。可以切换另一个场景,或自己随便点。</div>' : ''}
+    <div class="mu" style="margin-top:8px">向导按钮只是替你点。你也可以不用它,自己切换角色操作。</div></div>
+    <div class="card"><h3>当前状态一览</h3>
+      <div class="mu">订单预计到货:第 ${Logic.effEta(S.orders[0])} 天 · 到货:${{none:'未到',claimed:'已声称',confirmed:'已确认'}[S.orders[0].arrival]}</div>
+      <div class="mu">安全卡:${S.safety.filter(x=>x.claim==='confirmed').length}/4 已确认</div>
+      <div class="mu">异常:${S.incidents.map(i => i.id+' '+INC_STEPS.find(x=>x[0]===i.status)[1]).join(' · ') || '无'}</div>
+      <div class="mu">日志:${S.log.length} 条</div></div>`;
+}
+
+/* ---------- 渲染与事件 ---------- */
+function render(){
+  $('roles').innerHTML = Object.entries(ROLES).map(([k,v]) => `<button class="${ui.role===k?'sel':''}" data-act="role" data-r="${k}">${v}视角</button>`).join('') + `<button data-act="reset">重置</button>`;
+  const note = S.notice ? `<div class="notice ${S.notice.ok?'n-ok':'n-no'}">${esc(S.notice.text)}</div>` : '';
+  let html;
+  if (ui.role === 'owner'){
+    const pg = ui.page === 'workspace' ? pWorkspace() : ui.page === 'incident' ? pIncident() : pOverview();
+    html = ownerNav() + note + pg;
+  } else html = note + pExternal();
+  $('main').innerHTML = html;
+  renderGuide();
+}
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const d = el.dataset, a = d.act;
+  if (a === 'role'){ ui.role = d.r; ui.token = null; S.notice = null; if (d.r === 'owner' && ui.page === 'inbox') ui.page = 'overview'; }
+  else if (a === 'reset'){ S = Logic.initial(); ui.step = 0; ui.page = 'overview'; ui.token = null; ui.role = 'owner'; }
+  else if (a === 'nav'){ ui.page = d.page; S.notice = null; }
+  else if (a === 'tab'){ ui.tab = d.tab; S.notice = null; }
+  else if (a === 'todo'){ const x = todos()[+d.i]; Object.assign(ui, x.go); }
+  else if (a === 'openinc'){ ui.page = 'incident'; ui.incId = d.id; }
+  else if (a === 'reqstart') D({type:'REQUEST_START', taskId:'t2'});
+  else if (a === 'grant') D({type:'GRANT_START', taskId:'t2'});
+  else if (a === 'confirmarr') D({type:'CONFIRM_ARRIVAL', orderId:'o1'});
+  else if (a === 'ownerdelay') D({type:'REPORT_DELAY', orderId:'o1', newEta:+val('f-eta'), reason:val('f-reason'), actor:'负责人(代录)'});
+  else if (a === 'approve') D({type:'REVIEW_SAFETY', key:d.key, approve:true});
+  else if (a === 'reject') D({type:'REVIEW_SAFETY', key:d.key, approve:false, reason:val('rj-'+d.key)});
+  else if (a === 'ownsubmit'){ D({type:'SUBMIT_EVIDENCE', key:d.key, evidence:val('own-'+d.key), actor:'负责人'}); }
+  else if (a === 'setplan'){ const r = document.querySelector('input[name=plan]:checked'); D({type:'SET_PLAN', incidentId:d.id, plan:r ? r.value : null, assignee:val('f-assignee')}); }
+  else if (a === 'closeinc') D({type:'CLOSE_INCIDENT', incidentId:d.id});
+  else if (a === 'openlink'){ ui.token = d.token; S.notice = null; }
+  else if (a === 'closelink') ui.token = null;
+  else if (a === 'extdelay'){ D({type:'REPORT_DELAY', orderId:'o1', newEta:+val('f-eta'), reason:val('f-reason'), actor:Logic.partyName(ui.role), token:d.token}); if (S.notice.ok) ui.token = null; }
+  else if (a === 'ship') D({type:'CLAIM_SHIP', orderId:'o1', actor:Logic.partyName(ui.role)});
+  else if (a === 'claimarr'){ D({type:'CLAIM_ARRIVAL', orderId:'o1', actor:Logic.partyName(ui.role), token:d.token}); ui.token = null; }
+  else if (a === 'confirmplan'){ D({type:'PARTY_CONFIRM_PLAN', incidentId:d.id, token:d.token, accept:true}); ui.token = null; }
+  else if (a === 'denyplan'){ D({type:'PARTY_CONFIRM_PLAN', incidentId:d.id, token:d.token, accept:false, note:val('f-note')}); ui.token = null; }
+  else if (a === 'submitev'){ D({type:'SUBMIT_EVIDENCE', key:d.key, evidence:val('f-evidence'), actor:Logic.partyName(ui.role), token:d.token}); if (S.notice.ok) ui.token = null; }
+  else if (a === 'scen'){ ui.scen = d.k; ui.step = 0; }
+  else if (a === 'restart'){ S = Logic.initial(); ui.step = 0; ui.role = 'owner'; ui.page = 'overview'; ui.token = null; }
+  else if (a === 'runstep'){ SCEN[ui.scen].steps[ui.step].run(); ui.step++; }
+  render();
+});
+render();
+</script>
+</body>
+</html>

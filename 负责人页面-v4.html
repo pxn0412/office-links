@@ -1,0 +1,972 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>照明工程管控台 · 负责人</title>
+<style>
+:root{
+  --done:#2e7d32; --done-bg:#e8f5e9;
+  --doing:#1565c0; --doing-bg:#e3f2fd;
+  --blocked:#c62828; --blocked-bg:#ffebee;
+  --affected:#e65100; --affected-bg:#fff3e0;
+  --todo:#616161; --todo-bg:#f3f3f3;
+  --line:#d9dde3; --ink:#1d2430; --muted:#5f6b7a; --bg:#f6f7f9;
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.6 -apple-system,"Microsoft YaHei",sans-serif;color:var(--ink);background:var(--bg)}
+a{color:var(--doing)}
+header{background:#fff;border-bottom:1px solid var(--line);padding:10px 20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;position:sticky;top:0;z-index:5}
+header h1{font-size:16px;margin:0}
+.tag{font-size:12px;padding:1px 8px;border-radius:10px;background:#fff3cd;color:#7a5b00;border:1px solid #f0dc8a}
+.sp{flex:1}
+button{font:inherit;padding:4px 12px;border:1px solid #b7bec9;background:#fff;border-radius:6px;cursor:pointer}
+button:hover{background:#f0f3f7}
+button.pri{background:var(--doing);color:#fff;border-color:var(--doing)}
+button.pri:hover{background:#0d4f9e}
+button.danger{color:var(--blocked);border-color:#e3a6a6}
+button:disabled{opacity:.45;cursor:not-allowed}
+input[type=text],input[type=date]{font:inherit;padding:3px 6px;border:1px solid #b7bec9;border-radius:6px}
+main{max-width:1100px;margin:0 auto;padding:18px 20px 60px}
+.stats{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.stat{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 18px;min-width:130px}
+.stat b{font-size:22px;display:block}
+.stat span{color:var(--muted);font-size:12px}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin-bottom:12px}
+.card.l3{border-left:6px solid var(--blocked)}
+.card.l2{border-left:6px solid var(--affected)}
+.card.l1{border-left:6px solid #f2b705}
+.card.l0{border-left:6px solid var(--done)}
+.card h3{margin:0 0 4px;font-size:16px;display:flex;gap:8px;align-items:center}
+.card p{margin:2px 0}
+.next{font-weight:600}
+.row{display:flex;gap:12px;align-items:center}
+.row .grow{flex:1}
+.fold{background:#fff;border:1px solid var(--line);border-left:6px solid var(--done);border-radius:10px;padding:8px 18px;margin-bottom:8px;display:flex;gap:12px;align-items:center}
+.mini{display:inline-flex;gap:2px;vertical-align:middle}
+.mini i{width:14px;height:8px;border-radius:2px;display:inline-block}
+.c-done{background:var(--done)} .c-doing{background:var(--doing)} .c-blocked{background:var(--blocked)} .c-affected{background:var(--affected)} .c-todo{background:#c5cad2}
+h2{font-size:15px;margin:22px 0 8px}
+.headline{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 18px}
+.headline.l3{border-left:6px solid var(--blocked)} .headline.l2{border-left:6px solid var(--affected)}
+.headline.l1{border-left:6px solid #f2b705} .headline.l0{border-left:6px solid var(--done)}
+.headline p{margin:2px 0}
+.flowwrap{background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px;overflow-x:auto}
+.flow{position:relative}
+.flow svg{position:absolute;left:0;top:0;pointer-events:none}
+.node{position:absolute;border-radius:8px;border:2px solid;padding:4px 6px;font-size:12px;line-height:1.35;cursor:pointer;overflow:hidden}
+.node b{display:block;font-size:13px}
+.node.done{border-color:var(--done);background:var(--done-bg);color:var(--done)}
+.node.doing{border-color:var(--doing);background:var(--doing-bg);color:var(--doing)}
+.node.blocked{border-color:var(--blocked);background:var(--blocked-bg);color:var(--blocked)}
+.node.affected{border-color:var(--affected);background:var(--affected-bg);color:var(--affected)}
+.node.todo{border-color:#b9bfc9;background:var(--todo-bg);color:var(--todo)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+th,td{padding:7px 10px;text-align:left;border-bottom:1px solid #eceff3;vertical-align:top;font-size:13px}
+th{background:#f0f2f5;font-weight:600;white-space:nowrap}
+tr.hl td{background:#fffbe6}
+.pill{display:inline-block;padding:0 8px;border-radius:10px;font-size:12px;border:1px solid}
+.pill.done{color:var(--done);border-color:var(--done);background:var(--done-bg)}
+.pill.doing{color:var(--doing);border-color:var(--doing);background:var(--doing-bg)}
+.pill.blocked{color:var(--blocked);border-color:var(--blocked);background:var(--blocked-bg)}
+.pill.affected{color:var(--affected);border-color:var(--affected);background:var(--affected-bg)}
+.pill.todo{color:var(--todo);border-color:#b9bfc9;background:var(--todo-bg)}
+.warn{color:var(--affected);font-size:12px}
+.muted{color:var(--muted)}
+.todo-item{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:8px}
+.todo-item .acts{margin-top:6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sim{background:#fbfaf3;border:1px dashed #cdbf6a;border-radius:10px;padding:12px 16px}
+.sim .tabs{display:flex;gap:6px;margin-bottom:10px;align-items:center;flex-wrap:wrap}
+.sim .tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.simtask{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:8px}
+.log li{margin-bottom:3px}
+.bk{margin-bottom:10px;display:inline-block}
+.empty{color:var(--muted);padding:8px 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>照明工程管控台 · 负责人</h1>
+  <span class="tag">模拟数据</span>
+  <span class="sp"></span>
+  <span id="today"></span>
+  <a href="#new"><button class="pri">新建项目</button></a>
+  <button data-act="advance">推进一天</button>
+  <button data-act="reset">重置演示数据</button>
+</header>
+<main id="app"></main>
+
+<script>
+/*LOGIC_START*/
+const Logic = (() => {
+  const ROLE = { owner: '负责人', supplier: '供应商', builder: '施工方', customer: '客户' };
+  const TASKS = [
+    { id: 1,  name: '签约交接',       doer: '负责人',             holder: 'owner',    parties: ['owner'],              deps: [],     deliver: '合同归档;范围、金额、付款和验收条件核对完' },
+    { id: 2,  name: '确认执行依据',   doer: '负责人整理,客户确认', holder: 'customer', parties: ['customer'],           deps: [1],    deliver: '灯具规格、数量、现场条件、验收标准定稿' },
+    { id: 3,  name: '采购备货',       doer: '供应商',             holder: 'supplier', parties: ['supplier'],           deps: [2],    deliver: '订单、交期、付款安排' },
+    { id: 4,  name: '施工准备',       doer: '施工方',             holder: 'builder',  parties: ['builder'],            deps: [2],    deliver: '施工队名单、现场条件已确认' },
+    { id: 5,  name: '到货核验',       doer: '施工方',             holder: 'builder',  parties: ['builder'],            deps: [3],    deliver: '到货照片、数量型号核对(对照采购订单)、签收单' },
+    { id: 6,  name: '开工确认',       doer: '负责人',             holder: 'owner',    parties: ['owner'],              deps: [4, 5], deliver: '负责人点确认' },
+    { id: 7,  name: '安装施工',       doer: '施工方',             holder: 'builder',  parties: ['builder'],            deps: [6],    deliver: '进展记录,问题和变更说明' },
+    { id: 8,  name: '自检及客户验收', doer: '施工方、客户',       holder: 'builder',  parties: ['builder', 'customer'], deps: [7],    deliver: '自检记录、验收单' },
+    { id: 9,  name: '完成交付',       doer: '负责人',             holder: 'owner',    parties: ['owner'],              deps: [8],    deliver: '验收单和结算依据归档' },
+    { id: 10, name: '质保跟踪',       doer: '负责人',             holder: 'owner',    parties: ['owner'],              deps: [9],    deliver: '质保期内售后处理完,质保金收回' }
+  ];
+  const PAY_DEFS = [
+    { id: 'p1', name: '定金',   trigger: 1,  pct: 30, cum: 30 },
+    { id: 'p2', name: '到货款', trigger: 5,  pct: 50, cum: 80 },
+    { id: 'p3', name: '验收款', trigger: 9,  pct: 10, cum: 90 },
+    { id: 'p4', name: '质保金', trigger: 10, pct: 10, cum: 100 }
+  ];
+  const TASK_BY_ID = {}; TASKS.forEach(d => { TASK_BY_ID[d.id] = d; });
+
+  function addDays(s, n) { const d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
+  function diff(a, b) { return Math.round((new Date(a + 'T00:00:00Z') - new Date(b + 'T00:00:00Z')) / 86400000); }
+  function fmt(s) { if (!s) return ''; const p = s.split('-'); return Number(p[1]) + '/' + Number(p[2]); }
+  const clone = o => JSON.parse(JSON.stringify(o));
+
+  // ---------- 数据构造 ----------
+  function blankTask() { return { done: false, doneAt: null, promised: null, original: null, history: [], changes: 0, reportedDone: null, problem: null, pending: null }; }
+  function planned(date) { const t = blankTask(); if (date) { t.promised = date; t.original = date; t.history = [date]; } return t; }
+  function finished(date) { const t = planned(date); t.done = true; t.doneAt = date; return t; }
+  function mkProject(id, name, customer, total, target, taskMap, payMap) {
+    const tasks = {};
+    TASKS.forEach(d => { tasks[d.id] = taskMap[d.id] || blankTask(); });
+    const payments = PAY_DEFS.map(def => ({
+      id: def.id, name: def.name, trigger: def.trigger, pct: def.pct, cum: def.cum,
+      amount: total * def.pct / 100, due: (payMap[def.id] || {}).due || null, received: (payMap[def.id] || {}).received || null
+    }));
+    return { id, name, customer, total, target, tasks, payments, decisions: [], log: [] };
+  }
+  function seed() {
+    const today = '2026-06-13';
+    const A = mkProject('A', 'A 酒店', '某酒店(模拟)', 100, '王总(决策领导)', {
+      1: finished('2026-05-20'), 2: finished('2026-05-28'), 3: planned('2026-06-10'), 4: finished('2026-06-08'),
+      5: planned('2026-06-12'), 6: planned('2026-06-18'), 7: planned('2026-06-25'), 8: planned('2026-06-30'),
+      9: planned('2026-07-03'), 10: blankTask()
+    }, { p1: { due: '2026-05-21', received: '2026-05-22' }, p2: { due: '2026-06-20' }, p3: { due: '2026-07-10' } });
+    A.log.push({ at: '2026-06-08', who: '施工方', text: '报「施工准备」已完成,负责人已确认', proxy: false });
+    const B = mkProject('B', 'B 工厂', '某工厂(模拟)', 60, '李总(决策领导)', {
+      1: finished('2026-03-01'), 2: finished('2026-03-08'), 3: finished('2026-03-20'), 4: finished('2026-03-18'),
+      5: finished('2026-03-25'), 6: finished('2026-03-28'), 7: finished('2026-04-20'), 8: finished('2026-05-25'),
+      9: finished('2026-06-01'), 10: planned('2026-12-10')
+    }, { p1: { due: '2026-03-02', received: '2026-03-03' }, p2: { due: '2026-03-26', received: '2026-03-30' }, p3: { due: '2026-06-08' }, p4: { due: '2026-12-10' } });
+    const C = mkProject('C', 'C 学校', '某学校(模拟)', 80, '赵校长(决策领导)', {
+      1: finished('2026-06-01'), 2: finished('2026-06-06'), 3: planned('2026-06-15'), 4: planned('2026-06-14'),
+      5: planned('2026-06-18'), 6: planned('2026-06-20'), 7: planned('2026-06-27'), 8: planned('2026-07-02'),
+      9: planned('2026-07-05'), 10: blankTask()
+    }, { p1: { due: '2026-06-02', received: '2026-06-03' }, p2: { due: '2026-06-22' } });
+    return { today, projects: [A, B, C] };
+  }
+
+  function ancestors(id) {
+    const out = []; const seen = {};
+    (function walk(x) { TASK_BY_ID[x].deps.forEach(d => { if (!seen[d]) { seen[d] = 1; out.push(d); walk(d); } }); })(id);
+    return out;
+  }
+  // ---------- 问题(独立的一件事:谁报的、影响谁、谁在处理、怎么收尾、全过程) ----------
+  const KINDS = ['交货延期', '施工风险', '资金', '其他'];
+  const ISSUE_LABEL = { open: '待指派', assigned: '处理中', resolved: '待你确认', closed: '已关闭' };
+  const issuesOf = p => p.issues || [];
+  const openIssueOf = (p, t) => issuesOf(p).find(i => i.t === t && i.status !== 'closed') || null;
+  function tl(issue, today, who, text) { issue.timeline.push({ at: today, who, text }); }
+  function pushMsg(p, today, to, issue, text) {
+    p.msgs = p.msgs || [];
+    p.msgs.push({ id: 'm' + (p.msgs.length + 1), to, issue: issue.id, text, at: today, read: false });
+    tl(issue, today, '系统', '已通知' + ROLE[to] + ':' + (text.length > 24 ? text.slice(0, 24) + '…' : text));
+  }
+  // 自动通知的对象:受影响任务里的供应商、施工方。客户不自动通知(要不要告诉客户,由负责人自己决定)。
+  function openIssue(p, today, o) {
+    p.issues = p.issues || [];
+    const issue = { id: 'i' + (p.issues.length + 1), t: o.t || null, kind: KINDS.includes(o.kind) ? o.kind : '其他', text: o.text, by: o.by, at: today,
+      status: 'open', assignee: null, note: '', result: null, affected: [], timeline: [] };
+    issue.affected = o.t ? dependents(o.t).filter(x => !p.tasks[x].done) : [];
+    p.issues.push(issue);
+    tl(issue, today, o.by === 'owner' ? '负责人' : ROLE[o.by], '上报问题(' + issue.kind + '):' + o.text);
+    const roles = {};
+    issue.affected.forEach(id => TASK_BY_ID[id].parties.forEach(r => {
+      if (r !== 'owner' && r !== 'customer' && r !== o.by) (roles[r] = roles[r] || []).push(TASK_BY_ID[id].name);
+    }));
+    Object.keys(roles).forEach(r => pushMsg(p, today, r, issue,
+      '「' + TASK_BY_ID[o.t].name + '」出了问题:' + o.text + '。你负责的' + roles[r].map(n => '「' + n + '」').join('') + '可能要调整,新安排会再通知你。'));
+    return issue;
+  }
+  function closeIssue(p, today, issue, who, text, newDate) {
+    issue.status = 'closed'; issue.closedAt = today;
+    if (issue.t) { const tk = p.tasks[issue.t]; tk.problem = null; tk.pending = null; if (newDate && !tk.done) applyDate(tk, newDate, today); }
+    tl(issue, today, who, '问题关闭' + (text ? ':' + text : '') + (newDate ? ',新完成日 ' + fmt(newDate) : ''));
+    const to = {};
+    (p.msgs || []).filter(m => m.issue === issue.id).forEach(m => { to[m.to] = 1; });
+    if (issue.by !== 'owner') to[issue.by] = 1;
+    if (issue.assignee) to[issue.assignee] = 1;
+    Object.keys(to).forEach(r => {
+      if (r === 'owner' || r === 'customer') return;
+      pushMsg(p, today, r, issue, '问题已处理:' + (issue.t ? '「' + TASK_BY_ID[issue.t].name + '」' : '') + issue.text + '。' + (text ? '结果:' + text + '。' : '') + (newDate ? '新完成日 ' + fmt(newDate) + '。' : ''));
+    });
+  }
+  function closeTaskIssues(p, today, t, text, newDate) {
+    issuesOf(p).filter(i => i.t === t && i.status !== 'closed').forEach(i => closeIssue(p, today, i, '负责人', text, newDate || null));
+  }
+  // ---------- 派生状态 ----------
+  function openDecision(p, t) { return p.decisions.find(d => d.t === t && !d.chosen) || null; }
+
+  function derive(p, today) {
+    const T = {};
+    TASKS.forEach(def => {
+      const s = p.tasks[def.id];
+      const depsDone = def.deps.every(x => T[x].done);
+      const done = !!s.done;
+      const pendingConfirm = !done && !!s.reportedDone;
+      const late = (s.promised && s.promised < today) ? diff(today, s.promised) : 0;
+      const dec = openDecision(p, def.id);
+      const issue = openIssueOf(p, def.id);
+      const blocked = !done && !pendingConfirm && (!!s.problem || !!issue || (depsDone && late > 0));
+      const upstreamBad = def.deps.some(x => !T[x].done && (T[x].status === 'blocked' || T[x].status === 'affected'));
+      const affected = !done && !blocked && upstreamBad;
+      let status;
+      if (done) status = 'done';
+      else if (blocked) status = 'blocked';
+      else if (affected) status = 'affected';
+      else if (pendingConfirm || (depsDone && s.promised)) status = 'doing';
+      else status = 'todo';
+      const nodate = !done && !s.promised;
+      const conflict = !done && !!s.promised && ancestors(def.id).some(x => !T[x].done && ((p.tasks[x].pending ? p.tasks[x].pending.date : p.tasks[x].promised) || '') > s.promised);
+      const ballOwner = !done && (pendingConfirm || !!s.pending || !!dec || (!!issue && (issue.status === 'open' || issue.status === 'resolved')));
+      T[def.id] = { def, s, done, ready: depsDone, pendingConfirm, late, blocked, status, nodate, conflict, dec, issue, ballOwner,
+                    dueToday: !done && s.promised === today };
+    });
+    return { T };
+  }
+  function statusLabel(c) {
+    if (c.done) return '已完成';
+    if (c.pendingConfirm) return '待你确认';
+    if (c.status === 'blocked') return (c.s.problem || c.issue) && !c.late ? '卡住·有问题' : '卡住·晚' + c.late + '天';
+    if (c.status === 'affected') return c.nodate ? '受影响·未约定时间' : '受影响';
+    if (c.status === 'doing') return '进行中';
+    return c.nodate ? '未约定时间' : '未开始';
+  }
+  function payInfo(pay, D, today) {
+    const tr = D.T[pay.trigger];
+    if (pay.received) return { pay, state: 'received', days: 0 };
+    if (tr.done) {
+      if (pay.due && pay.due < today) return { pay, state: 'overdue', days: diff(today, pay.due) };
+      return { pay, state: 'collectable', days: 0 };
+    }
+    if (tr.status === 'blocked' || tr.status === 'affected') return { pay, state: 'affected', days: 0 };
+    return { pay, state: 'notyet', days: 0 };
+  }
+  function dependents(id) {
+    const out = []; const seen = {};
+    (function walk(x) { TASKS.forEach(d => { if (d.deps.includes(x) && !seen[d.id]) { seen[d.id] = 1; out.push(d.id); walk(d.id); } }); })(id);
+    return out;
+  }
+  // 如果对方报的新日期属实,会冲突的后续任务和会晚的付款
+  function pendingImpact(p, t, today) {
+    const s = p.tasks[t]; if (!s.pending) return null;
+    const D = derive(p, today);
+    const deps = dependents(t).filter(id => !D.T[id].done);
+    const conflicts = deps.filter(id => p.tasks[id].promised && p.tasks[id].promised < s.pending.date);
+    const involved = [t].concat(deps);
+    const pays = p.payments.filter(x => !x.received && involved.includes(x.trigger) && x.due && x.due < s.pending.date);
+    return { conflicts, pays };
+  }
+  function pendingItems(p, D) {
+    const items = [];
+    TASKS.forEach(def => {
+      const c = D.T[def.id]; if (c.done) return;
+      if (c.s.reportedDone) items.push({ kind: 'done', t: def.id });
+      if (c.s.pending) items.push({ kind: 'date', t: def.id });
+      if (c.s.problem && !c.dec && !c.issue) items.push({ kind: 'problem', t: def.id });
+      if (c.dec) items.push({ kind: 'decide', t: def.id, dec: c.dec.id });
+      if (c.conflict && !c.s.pending) items.push({ kind: 'resched', t: def.id });
+      if (!c.s.promised && c.ready && !c.s.pending) items.push({ kind: 'setdate', t: def.id });
+    });
+    issuesOf(p).forEach(i => {
+      if (i.t && openDecision(p, i.t)) return; // 已有方案在等选择,不重复
+      if (i.status === 'open') items.push({ kind: 'issue_open', t: i.t, issue: i.id });
+      else if (i.status === 'resolved') items.push({ kind: 'issue_result', t: i.t, issue: i.id });
+    });
+    return items;
+  }
+  function names(ids, max) {
+    const list = ids.map(id => TASK_BY_ID[id].name);
+    return list.slice(0, max).join('、') + (list.length > max ? '等' + list.length + '项' : '');
+  }
+  function earliestDeadline(dec, today) {
+    const ds = dec.options.map(o => o.deadline).filter(x => x && x >= today).sort();
+    return ds[0] || null;
+  }
+
+  function summarize(p, today) {
+    const D = derive(p, today);
+    const cells = TASKS.map(d => D.T[d.id]);
+    const pays = p.payments.map(x => payInfo(x, D, today));
+    const counts = { done: 0, doing: 0, blocked: 0, affected: 0, todo: 0 };
+    cells.forEach(c => { counts[c.status]++; });
+    const items = pendingItems(p, D);
+    const blocked = cells.filter(c => c.status === 'blocked');
+    const affected = cells.filter(c => c.status === 'affected');
+    const affPays = pays.filter(x => x.state === 'affected');
+    const overdue = pays.filter(x => x.state === 'overdue');
+    const unpaid = p.payments.filter(x => !x.received).reduce((a, x) => a + x.amount, 0);
+    let level = blocked.length ? 3 : overdue.length ? 2 : items.length ? 1 : 0;
+    let line1 = '', line2 = '', line3 = '';
+
+    if (blocked.length) {
+      const b = blocked[0], d = b.def, s = b.s;
+      const iss = b.issue;
+      const what = s.problem ? d.name + ':' + ROLE[s.problem.by] + '报有问题(' + s.problem.reason + ')' + (b.late ? ',已晚' + b.late + '天' : '')
+                 : iss ? d.name + ':' + (iss.by === 'owner' ? '你' : ROLE[iss.by]) + '报了' + iss.kind + '(' + iss.text + ')' + (b.late ? ',已晚' + b.late + '天' : '')
+                             : d.name + '比约定晚 ' + b.late + ' 天';
+      const where = b.ballOwner ? '你手上(等你处理)' : (iss && iss.status === 'assigned') ? ROLE[iss.assignee] + '(已指派处理)' : d.holder === 'owner' ? '你自己手上' : ROLE[d.holder];
+      line1 = what + '。卡在' + where + '。';
+      if (blocked.length > 1) line1 += '另有 ' + (blocked.length - 1) + ' 项也卡住。';
+      if (overdue.length) line1 += '另有逾期应收:' + overdue.map(x => x.pay.name).join('、') + '。';
+      const parts = [];
+      if (affected.length) parts.push(names(affected.map(c => c.def.id), 4));
+      if (affPays.length) parts.push((affected.length ? '以及' : '') + affPays.map(x => x.pay.name).join('、'));
+      line2 = parts.length ? '会拖住:' + parts.join(',') : '暂时没有后续任务受影响';
+      if (b.dec) { const dl = earliestDeadline(b.dec, today); line3 = '下一步:在 ' + b.dec.options.length + ' 个方案里选一个' + (dl ? '(最晚 ' + fmt(dl) + ' 决定)' : '(部分方案已来不及)'); }
+      else if (s.pending) line3 = '下一步:确认' + ROLE[s.pending.by] + '报的新日期 ' + fmt(s.pending.date);
+      else if (iss && iss.status === 'open') line3 = '下一步:指派谁来处理这个问题(或让对方先提方案)';
+      else if (iss && iss.status === 'assigned') line3 = '下一步:等' + ROLE[iss.assignee] + '回复处理结果';
+      else if (iss && iss.status === 'resolved') line3 = '下一步:确认' + ROLE[iss.assignee] + '的处理结果';
+      else if (d.holder === 'owner') line3 = '下一步:这是你自己的任务,先完成它或改约日期';
+      else if (s.problem) line3 = '下一步:等' + ROLE[d.holder] + '提方案,或联系对方';
+      else line3 = '下一步:联系' + ROLE[d.holder] + ',约新的完成日';
+    } else if (overdue.length) {
+      const o = overdue[0];
+      line1 = o.pay.name + '已到期 ' + o.days + ' 天,还没到账。' + (overdue.length > 1 ? '另有 ' + (overdue.length - 1) + ' 笔逾期。' : '');
+      line2 = '应收 ' + o.pay.amount + ' 万(累计 ' + o.pay.cum + '%)。催款对象:' + p.target;
+      line3 = '下一步:催' + p.target;
+      const ld = (o.pay.duns || []).slice(-1)[0];
+      if (ld) {
+        line2 += '。已催 ' + o.pay.duns.length + ' 次,最近 ' + fmt(ld.at) + '(' + ld.channel + ')' + (ld.promise ? ',对方承诺 ' + fmt(ld.promise) + ' 前付' : '');
+        line3 = ld.promise && ld.promise >= today ? '下一步:等到 ' + fmt(ld.promise) + ',没到账再催' + p.target : '下一步:再催' + p.target + ',并留下书面记录';
+      }
+    } else if (items.length) {
+      line1 = '有 ' + items.length + ' 件事等你处理。';
+      const k = items[0], tn = k.t ? TASK_BY_ID[k.t].name : '项目问题';
+      line2 = ({ issue_open: '「' + tn + '」有新问题,还没指派', issue_result: '「' + tn + '」处理结果等你确认', done: '「' + tn + '」对方报了完成,等你确认', date: '「' + tn + '」对方报了新日期,等你确认', problem: '「' + tn + '」对方报了有问题', decide: '「' + tn + '」有方案等你选', setdate: '「' + tn + '」还没约定完成日', resched: '「' + tn + '」约定日早于前置任务的新日期,要重新约' })[k.kind];
+      line3 = '下一步:' + line2.replace(/^「.*?」/, '处理「' + tn + '」:');
+    } else {
+      const open = cells.filter(c => !c.done);
+      if (!open.length && pays.every(x => x.state === 'received')) { line1 = '全部完成,款项已结清。'; }
+      else {
+        line1 = '进度正常。';
+        const nxt = open.filter(c => c.ready && c.s.promised).sort((a, b) => a.s.promised < b.s.promised ? -1 : 1)[0];
+        line3 = nxt ? '下一步:' + nxt.def.name + '(' + ROLE[nxt.def.holder] + ',约 ' + fmt(nxt.s.promised) + ')' : '下一步:无';
+      }
+    }
+
+    // 下一个关键日期
+    let nextDate = null;
+    cells.filter(c => !c.done).forEach(c => {
+      const date = c.s.pending ? c.s.pending.date : c.s.promised; if (!date) return;
+      if (date >= today || c.s.pending) { if (!nextDate || date < nextDate.date) nextDate = { date, t: c.def.id, pending: !!c.s.pending }; }
+    });
+    return { level, line1, line2, line3, cells, pays, counts, items, unpaid, nextDate, D };
+  }
+
+  // ---------- 今天要发的提醒(只算不改,发不发由负责人决定) ----------
+  // 只提醒"球在外部人手里"的任务:前置已完成、没报完成、没在等你确认/选方案/处理问题。
+  function reminders(p, today) {
+    const D = derive(p, today), out = [];
+    TASKS.forEach(def => {
+      if (def.holder === 'owner') return;
+      const c = D.T[def.id];
+      if (c.done || !c.ready || c.pendingConfirm || c.dec || c.s.pending || c.s.problem || c.issue) return;
+      let kind, head, days = 0;
+      if (!c.s.promised) { kind = 'ask'; head = '请告知预计完成日期'; }
+      else {
+        days = diff(c.s.promised, today);
+        if (days > 1) return;
+        if (days === 1) { kind = 'soon'; head = '明天(' + fmt(c.s.promised) + ')到期,请确认能否按时'; }
+        else if (days === 0) { kind = 'today'; head = '今天到期,请告知进展'; }
+        else { kind = 'late'; head = '已过约定日 ' + (-days) + ' 天,请今天回复'; }
+      }
+      out.push({ p: p.id, t: def.id, role: def.holder, kind, days,
+        text: '您好,「' + p.name + '」的「' + def.name + '」' + head + '。' + (kind === 'ask' ? '点链接填一个日期:' : '做完了、要改期、有问题,都在这里点:') });
+    });
+    return out;
+  }
+
+  // ---------- 状态变更 ----------
+  function applyDate(s, date, today) {
+    if (!s.promised) { s.promised = date; s.original = date; s.history = [date]; }
+    else if (date !== s.promised) { s.promised = date; s.changes++; s.history.push(date); }
+  }
+  function addLog(p, today, who, text, proxy) { p.log.unshift({ at: today, who, text, proxy: !!proxy }); }
+
+  function reduce(state, a) {
+    if (a.type === 'RESET') return seed();
+    if (a.type === 'ADVANCE_DAY') { const s = clone(state); s.today = addDays(s.today, a.n || 1); return s; }
+    if (a.type === 'CREATE_PROJECT') {
+      const name = String(a.name || '').trim().slice(0, 30), customer = String(a.customer || '').trim().slice(0, 30), target = String(a.target || '').trim().slice(0, 30);
+      const total = Number(a.total);
+      const pcts = PAY_DEFS.map((d, i) => Number((a.pcts || [])[i]));
+      if (!name || !customer || !target || !(total > 0) || total > 100000) return state;
+      if (pcts.some(x => !Number.isInteger(x) || x < 0 || x > 100) || pcts.reduce((x, y) => x + y, 0) !== 100) return state;
+      const s = clone(state);
+      let n = s.projects.length + 1; while (s.projects.some(x => x.id === 'P' + n)) n++;
+      const proj = mkProject('P' + n, name, customer, total, target, {}, {});
+      let cum = 0;
+      proj.payments = PAY_DEFS.map((d, i) => { cum += pcts[i]; return { id: d.id, name: d.name, trigger: d.trigger, pct: pcts[i], cum, amount: total * pcts[i] / 100, due: null, received: null }; }).filter(x => x.pct > 0);
+      addLog(proj, s.today, '负责人', '创建项目:合同 ' + total + ' 万,付款 ' + proj.payments.map(x => x.name + x.pct + '%').join('、'));
+      s.projects.push(proj);
+      return s;
+    }
+    const s = clone(state);
+    const p = s.projects.find(x => x.id === a.p); if (!p) return state;
+    const today = s.today;
+    const def = a.t ? TASK_BY_ID[a.t] : null;
+    const task = a.t ? p.tasks[a.t] : null;
+    const D = derive(p, today);
+    const who = a.role ? (a.proxy ? ROLE[a.role] + '(负责人代录)' : ROLE[a.role]) : '负责人';
+    const ext = ['REPORT_DONE', 'REPORT_DATE', 'REPORT_PROBLEM', 'PROPOSE'];
+    if (ext.includes(a.type)) {
+      if (!def || task.done) return state;
+      if (!a.role || a.role === 'owner' || !def.parties.includes(a.role)) return state;
+    }
+    switch (a.type) {
+      case 'REPORT_DONE':
+        task.reportedDone = { by: a.role, at: today }; task.problem = null;
+        addLog(p, today, who, '报「' + def.name + '」已完成,待负责人确认', a.proxy); break;
+      case 'REPORT_DATE':
+        if (!a.date) return state;
+        task.pending = { date: a.date, by: a.role, at: today };
+        addLog(p, today, who, '报「' + def.name + '」新完成日 ' + fmt(a.date) + ',待负责人确认', a.proxy); break;
+      case 'REPORT_PROBLEM':
+        if (!a.reason) return state;
+        task.problem = { reason: a.reason, by: a.role, at: today }; task.reportedDone = null;
+        if (!openIssueOf(p, a.t)) openIssue(p, today, { t: a.t, kind: a.kind || (a.role === 'supplier' ? '交货延期' : a.role === 'builder' ? '施工风险' : '其他'), text: a.reason, by: a.role });
+        addLog(p, today, who, '报「' + def.name + '」有问题:' + a.reason, a.proxy); break;
+      // ----- 问题:上报、指派、回复、确认 -----
+      case 'REPORT_ISSUE': {
+        if (!a.role || a.role === 'owner') return state;
+        const text = String(a.text || '').trim(); if (!text) return state;
+        if (a.t) { if (!def || task.done || !def.parties.includes(a.role) || openIssueOf(p, a.t)) return state; }
+        openIssue(p, today, { t: a.t || null, kind: a.kind, text, by: a.role });
+        addLog(p, today, who, '上报问题' + (def ? '(' + def.name + ')' : '') + ':' + text, a.proxy); break;
+      }
+      case 'OWNER_ISSUE': {
+        if (a.role) return state;
+        const text = String(a.text || '').trim(); if (!text) return state;
+        if (a.t) { if (!def || task.done || openIssueOf(p, a.t)) return state; }
+        openIssue(p, today, { t: a.t || null, kind: a.kind, text, by: 'owner' });
+        addLog(p, today, '负责人', '上报问题' + (def ? '(' + def.name + ')' : '') + ':' + text); break;
+      }
+      case 'ASSIGN_ISSUE': {
+        if (a.role) return state;
+        const i = issuesOf(p).find(x => x.id === a.issue);
+        if (!i || i.status !== 'open' || !['supplier', 'builder', 'customer'].includes(a.assignee)) return state;
+        i.assignee = a.assignee; i.note = String(a.note || '').trim(); i.status = 'assigned'; i.assignedAt = today;
+        tl(i, today, '负责人', '指派给' + ROLE[a.assignee] + '处理' + (i.note ? ',要求:' + i.note : ''));
+        pushMsg(p, today, a.assignee, i, '请你处理问题:' + (i.t ? '「' + TASK_BY_ID[i.t].name + '」' : '') + i.text + (i.note ? '。要求:' + i.note : '') + '。处理好后请回复结果和新的完成日。');
+        addLog(p, today, '负责人', '把问题「' + i.text + '」指派给' + ROLE[a.assignee]); break;
+      }
+      case 'ISSUE_REPLY': {
+        const i = issuesOf(p).find(x => x.id === a.issue);
+        if (!i || i.status !== 'assigned' || !a.role || a.role !== i.assignee) return state;
+        const text = String(a.text || '').trim(); if (!text) return state;
+        i.result = { text, newDate: a.date || null, by: a.role, at: today }; i.status = 'resolved';
+        tl(i, today, ROLE[a.role], '回复处理结果:' + text + (a.date ? ',新完成日 ' + fmt(a.date) : ''));
+        addLog(p, today, who, '回复问题「' + i.text + '」的处理结果,待负责人确认', a.proxy); break;
+      }
+      case 'CONFIRM_ISSUE': {
+        if (a.role) return state;
+        const i = issuesOf(p).find(x => x.id === a.issue);
+        if (!i || i.status !== 'resolved') return state;
+        closeIssue(p, today, i, '负责人', i.result.text, i.result.newDate);
+        addLog(p, today, '负责人', '确认处理结果,关闭问题「' + i.text + '」'); break;
+      }
+      case 'NUDGE_ISSUE': {
+        if (a.role) return state;
+        const i = issuesOf(p).find(x => x.id === a.issue);
+        if (!i || i.status !== 'assigned') return state;
+        const last = i.nudgedAt || i.assignedAt || i.at;
+        if (last === today && i.nudgedAt === today) return state; // 同一天只催一次
+        i.nudgedAt = today; i.nudges = (i.nudges || 0) + 1;
+        tl(i, today, '负责人', '催了' + ROLE[i.assignee] + '(第 ' + i.nudges + ' 次)');
+        pushMsg(p, today, i.assignee, i, '提醒:问题「' + i.text + '」还在等你回复处理结果(已等 ' + diff(today, i.assignedAt || i.at) + ' 天)。');
+        addLog(p, today, '负责人', '催' + ROLE[i.assignee] + '回复问题「' + i.text + '」'); break;
+      }
+      case 'REJECT_ISSUE': {
+        if (a.role) return state;
+        const i = issuesOf(p).find(x => x.id === a.issue);
+        if (!i || i.status !== 'resolved') return state;
+        i.status = 'assigned'; i.result = null; i.assignedAt = today; i.nudgedAt = null;
+        const why = String(a.note || '').trim();
+        tl(i, today, '负责人', '未接受处理结果' + (why ? ':' + why : '') + ',请继续处理');
+        pushMsg(p, today, i.assignee, i, '你回复的处理结果没有被接受' + (why ? ':' + why : '') + '。请继续处理问题:' + i.text);
+        addLog(p, today, '负责人', '退回问题「' + i.text + '」的处理结果'); break;
+      }
+      case 'CLOSE_ISSUE': {
+        if (a.role) return state;
+        const i = issuesOf(p).find(x => x.id === a.issue);
+        if (!i || (i.status !== 'open' && i.status !== 'assigned')) return state;
+        closeIssue(p, today, i, '负责人', String(a.text || '').trim() || '负责人直接处理', a.date || null);
+        addLog(p, today, '负责人', '关闭问题「' + i.text + '」'); break;
+      }
+      case 'MSG_READ':
+        if (!a.role || a.role === 'owner') return state;
+        (p.msgs || []).forEach(m => { if (m.to === a.role) m.read = true; });
+        break;
+      case 'PROPOSE': {
+        const opts = (a.options || []).filter(o => o.text);
+        if (!opts.length || openDecision(p, a.t)) return state;
+        p.decisions.push({ id: 'd' + (p.decisions.length + 1), t: a.t, by: a.role, at: today, chosen: null,
+          options: opts.map((o, i) => ({ id: 'o' + (i + 1), text: o.text, impact: o.impact || '', deadline: o.deadline || null, newDate: o.newDate || null })) });
+        { const oi = openIssueOf(p, a.t); if (oi) tl(oi, today, ROLE[a.role], '提出 ' + opts.length + ' 个方案,等负责人选择'); }
+        addLog(p, today, who, '为「' + def.name + '」提出 ' + opts.length + ' 个方案', a.proxy); break;
+      }
+      case 'CONFIRM_DONE':
+        if (!task.reportedDone) return state;
+        task.done = true; task.doneAt = today; task.reportedDone = null; task.problem = null;
+        closeTaskIssues(p, today, a.t, '任务已完成');
+        addLog(p, today, '负责人', '确认「' + def.name + '」已完成'); break;
+      case 'REJECT_DONE':
+        if (!task.reportedDone) return state;
+        task.reportedDone = null; addLog(p, today, '负责人', '退回「' + def.name + '」的完成报告'); break;
+      case 'OWNER_DONE':
+        if (def.holder !== 'owner' || task.done) return state;
+        task.done = true; task.doneAt = today; task.problem = null;
+        closeTaskIssues(p, today, a.t, '任务已完成');
+        addLog(p, today, '负责人', '完成「' + def.name + '」'); break;
+      case 'CONFIRM_DATE':
+        if (!task.pending) return state;
+        applyDate(task, task.pending.date, today); addLog(p, today, '负责人', '确认「' + def.name + '」新完成日 ' + fmt(task.pending.date));
+        closeTaskIssues(p, today, a.t, '确认了新完成日', task.pending.date);
+        task.pending = null; task.problem = null; break;
+      case 'REJECT_DATE':
+        if (!task.pending) return state;
+        task.pending = null; addLog(p, today, '负责人', '未接受「' + def.name + '」的新日期'); break;
+      case 'SET_DATE':
+        if (!a.date || task.done) return state;
+        applyDate(task, a.date, today); task.pending = null;
+        addLog(p, today, '负责人', '约定「' + def.name + '」完成日 ' + fmt(a.date)); break;
+      case 'RESOLVE_PROBLEM':
+        if (!task.problem) return state;
+        task.problem = null; closeTaskIssues(p, today, a.t, '负责人标记已解决');
+        addLog(p, today, '负责人', '标记「' + def.name + '」的问题已解决'); break;
+      case 'CHOOSE': {
+        const dec = p.decisions.find(x => x.id === a.dec); if (!dec || dec.chosen) return state;
+        const opt = dec.options.find(x => x.id === a.opt); if (!opt) return state;
+        if (opt.deadline && opt.deadline < today) return state;
+        dec.chosen = opt.id; dec.chosenAt = today;
+        const tk = p.tasks[dec.t];
+        if (opt.newDate) applyDate(tk, opt.newDate, today);
+        tk.problem = null; tk.pending = null;
+        closeTaskIssues(p, today, dec.t, '选择方案:' + opt.text, opt.newDate || null);
+        addLog(p, today, '负责人', '为「' + TASK_BY_ID[dec.t].name + '」选择方案:' + opt.text); break;
+      }
+      case 'RECORD_PAY': {
+        const pay = p.payments.find(x => x.id === a.pay); if (!pay || pay.received) return state;
+        if (!D.T[pay.trigger].done) return state;
+        pay.received = today; addLog(p, today, '负责人', '记录到账:' + pay.name + ' ' + pay.amount + ' 万'); break;
+      }
+      case 'DUN_PAY': {
+        if (a.role) return state;
+        const pay = p.payments.find(x => x.id === a.pay); if (!pay || pay.received) return state;
+        if (!D.T[pay.trigger].done) return state;
+        const channel = ['微信', '电话', '邮件', '催款函', '当面'].includes(a.channel) ? a.channel : null; if (!channel) return state;
+        const promise = /^\d{4}-\d{2}-\d{2}$/.test(a.promise || '') ? a.promise : null;
+        if (promise && promise < today) return state;
+        const note = String(a.note || '').trim().slice(0, 60);
+        pay.duns = pay.duns || [];
+        pay.duns.push({ at: today, to: p.target, channel, promise, note });
+        addLog(p, today, '负责人', '催款:' + pay.name + ',催' + p.target + '(' + channel + ')' + (promise ? ',对方承诺 ' + fmt(promise) + ' 前付' : '') + (note ? ',' + note : '')); break;
+      }
+      case 'SET_PAY_DUE': {
+        const pay = p.payments.find(x => x.id === a.pay); if (!pay || !a.date) return state;
+        pay.due = a.date; addLog(p, today, '负责人', '约定' + pay.name + '应收日 ' + fmt(a.date)); break;
+      }
+      default: return state;
+    }
+    return s;
+  }
+
+  return { reminders, ROLE, KINDS, ISSUE_LABEL, issuesOf, TASKS, TASK_BY_ID, PAY_DEFS, seed, reduce, derive, summarize, statusLabel, payInfo, pendingImpact, dependents, openDecision, earliestDeadline, fmt, diff, addDays };
+})();
+/*LOGIC_END*/
+</script>
+
+<script>
+(() => {
+  const L = Logic;
+  const KEY = 'lighting-console-v4';
+  // 服务器模式(从 http 打开):数据存在服务器,手机操作会同步过来。文件模式(双击打开):数据存在本机浏览器。
+  const SERVER = /^https?:$/.test(location.protocol);
+  const qk = new URLSearchParams(location.search).get('k');
+  if (qk) sessionStorage.setItem('lk', qk);
+  const OWNER_KEY = sessionStorage.getItem('lk') || '';
+  let state, rev = -1, links = null;
+  if (SERVER) state = { today: '', projects: [] };
+  else {
+    try { state = JSON.parse(localStorage.getItem(KEY)); } catch (e) { state = null; }
+    if (!state || !state.projects) state = L.seed();
+  }
+  const ui = { role: 'supplier', proxy: false, flash: '' };
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const fmt = L.fmt;
+
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  function api(path, body) {
+    return fetch(path, { method: body ? 'POST' : 'GET', headers: { 'x-key': OWNER_KEY, 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined })
+      .then(r => r.json());
+  }
+  function dispatch(a) {
+    if (SERVER) {
+      return api('/api/act', a).then(r => { if (r.state) { state = r.state; rev = r.rev; render(); } return !!r.ok; }).catch(() => false);
+    }
+    const next = L.reduce(state, a); if (next === state) return false; state = next; save(); render(); return true;
+  }
+  function poll() {
+    api('/api/state').then(r => { if (r.state && r.rev !== rev) { state = r.state; rev = r.rev; render(); } else if (r.error) { $('today').textContent = r.error; } }).catch(() => {});
+  }
+  if (SERVER) {
+    poll(); setInterval(poll, 2000);
+    api('/api/links').then(r => { if (r.links) { links = r; render(); } }).catch(() => {});
+  }
+
+  const miniBar = cells => '<span class="mini" aria-hidden="true">' + cells.map(c => '<i class="c-' + c.status + '" title="' + esc(c.def.name + ':' + L.statusLabel(c)) + '"></i>').join('') + '</span>';
+  const DOT = ['●', '●', '●', '●'];
+
+  // ---------- 首页 ----------
+  // ---------- 今天要发的提醒 ----------
+  function remindText(r) {
+    const tk = SERVER && links && links.links[r.p] ? links.links[r.p][r.role] : null;
+    return r.text + (tk ? ' ' + links.base + '/m/' + tk : '(链接要在服务器模式下才有)');
+  }
+  function remindPanel() {
+    // 对方的待办会自己出现在他的手机页上;这里只列"已经逾期还没动"的,你才需要出面
+    const rows = [];
+    state.projects.forEach(p => L.reminders(p, state.today).filter(r => r.kind === 'late').forEach(r => rows.push({ r, p })));
+    rows.sort((a, b) => a.r.days - b.r.days);
+    if (!rows.length) return '';
+    let h = '<h2>对方逾期没动 <span class="tag">' + rows.length + ' 件</span></h2><p class="muted">对方手机上已经显示为待办。逾期了还没动,才需要你出面。</p>';
+    rows.forEach(({ r, p }, i) => {
+      h += '<div class="card" style="margin:6px 0"><div><span class="tag">逾期 ' + (-r.days) + ' 天</span> <b>' + esc(L.ROLE[r.role]) + '</b> <span class="muted">' + esc(p.name) + ' · ' + esc(L.TASK_BY_ID[r.t].name) + '</span></div>' +
+        '<div class="remind-text" id="rt-' + i + '" style="margin:6px 0;padding:8px;background:#f4f6f9;border-radius:6px;word-break:break-all">' + esc(remindText(r)) + '</div>' +
+        '<button data-act="copy-remind" data-i="' + i + '">复制这句话</button> <a href="#p/' + p.id + '"><button>看项目</button></a></div>';
+    });
+    return h;
+  }
+
+  function renderHome() {
+    const sums = state.projects.map(p => ({ p, s: L.summarize(p, state.today) }));
+    sums.sort((a, b) => b.s.level - a.s.level);
+    const need = sums.filter(x => x.s.level >= 1).length;
+    const unpaid = sums.reduce((a, x) => a + x.s.unpaid, 0);
+    let h = '<div class="stats"><div class="stat"><b>' + sums.length + '</b><span>进行中项目</span></div>' +
+            '<div class="stat"><b>' + need + '</b><span>需要处理</span></div>' +
+            '<div class="stat"><b>' + unpaid + ' 万</b><span>合同未收合计(模拟,含未到期)</span></div></div>';
+    h += remindPanel();
+    sums.forEach(({ p, s }) => {
+      if (s.level === 0) {
+        h += '<div class="fold"><b>' + esc(p.name) + '</b><span class="grow muted" style="flex:1">' + esc(s.line1 + ' ' + s.line3) + '</span>' + miniBar(s.cells) + '<a href="#p/' + p.id + '">查看</a></div>';
+        return;
+      }
+      h += '<div class="card l' + s.level + '"><div class="row"><div class="grow" style="flex:1">' +
+        '<h3>' + esc(p.name) + '</h3>' +
+        '<p>' + esc(s.line1) + '</p>' + (s.line2 ? '<p class="muted">' + esc(s.line2) + '</p>' : '') +
+        (s.line3 ? '<p class="next">' + esc(s.line3) + '</p>' : '') +
+        '<p>' + miniBar(s.cells) + ' <span class="muted">已完成 ' + s.counts.done + '/10</span></p>' +
+        '</div><a href="#p/' + p.id + '"><button class="pri">处理</button></a></div></div>';
+    });
+    return h;
+  }
+
+  // ---------- 全局进度图 ----------
+  const POS = { 1: [0, 0], 2: [1, 0], 3: [2, 0], 5: [3, 0], 4: [2, 1], 6: [4, 0], 7: [5, 0], 8: [6, 0], 9: [7, 0], 10: [8, 0] };
+  const NW = 92, NH = 62, GX = 22, GY = 20;
+  function flow(s) {
+    const x = c => c * (NW + GX), y = r => r * (NH + GY);
+    const W = 9 * NW + 8 * GX, H = 2 * NH + GY;
+    let edges = '';
+    L.TASKS.forEach(d => d.deps.forEach(dep => {
+      const a = POS[dep], b = POS[d.id];
+      const x1 = x(a[0]) + NW, y1 = y(a[1]) + NH / 2, x2 = x(b[0]), y2 = y(b[1]) + NH / 2;
+      const src = s.D.T[dep];
+      const col = src.status === 'blocked' ? '#c62828' : src.status === 'affected' ? '#e65100' : '#8a94a3';
+      const path = y1 === y2 ? 'M' + x1 + ' ' + y1 + ' H' + (x2 - 3) : 'M' + x1 + ' ' + y1 + ' H' + (x2 - GX / 2) + ' V' + y2 + ' H' + (x2 - 3);
+      edges += '<path d="' + path + '" fill="none" stroke="' + col + '" stroke-width="2"' + (col === '#8a94a3' ? '' : ' stroke-dasharray="5 3"') + ' marker-end="url(#ar)"/>';
+    }));
+    let nodes = '';
+    s.cells.forEach(c => {
+      const p = POS[c.def.id];
+      nodes += '<div class="node ' + c.status + '" style="left:' + x(p[0]) + 'px;top:' + y(p[1]) + 'px;width:' + NW + 'px;height:' + NH + 'px" data-act="goto" data-t="' + c.def.id + '" title="' + esc(c.def.name + ':' + L.statusLabel(c)) + '">' +
+        '<b>' + c.def.id + ' ' + esc(c.def.name) + '</b>' + esc(L.statusLabel(c)) + (c.conflict ? ' ⚠' : '') + '</div>';
+    });
+    const lg = [['done', '已完成'], ['doing', '进行中'], ['blocked', '卡住'], ['affected', '受影响'], ['todo', '还没开始']]
+      .map(([k, n]) => '<span><i class="c-' + k + '"></i>' + n + ' ' + s.counts[k] + '</span>').join('');
+    return '<div class="flowwrap"><div class="flow" style="width:' + W + 'px;height:' + H + 'px">' +
+      '<svg width="' + W + '" height="' + H + '"><defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#8a94a3"/></marker></defs>' + edges + '</svg>' + nodes + '</div>' +
+      '<div class="legend">' + lg + '<span>⚠ 日期冲突</span></div></div>';
+  }
+
+  // ---------- 等你处理 ----------
+  function todoItems(p, s) {
+    if (!s.items.length) return '<div class="empty">没有要你处理的事。</div>';
+    return s.items.map(it => {
+      if (it.kind === 'issue_open' || it.kind === 'issue_result') return issueTodo(p, it);
+      const d = L.TASK_BY_ID[it.t], c = s.D.T[it.t], t = c.s;
+      let body = '', acts = '';
+      const dd = 'data-p="' + p.id + '" data-t="' + it.t + '"';
+      if (it.kind === 'done') {
+        body = ROLE_NAME(t.reportedDone.by) + '报「' + d.name + '」已完成(' + fmt(t.reportedDone.at) + ')。要交的:' + d.deliver;
+        acts = '<button class="pri" data-act="confirm-done" ' + dd + '>确认完成</button><button data-act="reject-done" ' + dd + '>退回</button>';
+      } else if (it.kind === 'date') {
+        const im = L.pendingImpact(p, it.t, state.today);
+        let hint = '';
+        if (im && (im.conflicts.length || im.pays.length)) {
+          hint = '<div class="warn">如果属实:' + (im.conflicts.length ? im.conflicts.map(id => '「' + L.TASK_BY_ID[id].name + '」约 ' + fmt(p.tasks[id].promised) + ' 要重新约').join(';') : '') +
+            (im.pays.length ? (im.conflicts.length ? ';' : '') + im.pays.map(x => x.name + '应收日 ' + fmt(x.due) + ' 会晚').join('、') : '') + '。</div>';
+        }
+        body = ROLE_NAME(t.pending.by) + '报「' + d.name + '」新完成日 ' + fmt(t.pending.date) + (t.promised ? '(现约定 ' + fmt(t.promised) + ')' : '(还没有约定日期)') + hint;
+        acts = '<button class="pri" data-act="confirm-date" ' + dd + '>确认新日期</button><button data-act="reject-date" ' + dd + '>不接受</button>';
+      } else if (it.kind === 'problem') {
+        body = ROLE_NAME(t.problem.by) + '报「' + d.name + '」有问题:' + esc(t.problem.reason) + '。还没有方案。';
+        acts = '<input type="date" id="sd-' + p.id + '-' + it.t + '"><button data-act="set-date" ' + dd + '>约新日期</button><button data-act="resolve-problem" ' + dd + '>问题已解决</button>';
+      } else if (it.kind === 'decide') {
+        const dec = L.openDecision(p, it.t);
+        body = '「' + d.name + '」有 ' + dec.options.length + ' 个方案,选一个:' + dec.options.map(o => {
+          const late = o.deadline && o.deadline < state.today;
+          return '<div style="margin:6px 0 0 10px"><b>' + esc(o.text) + '</b> <span class="muted">预估影响:' + esc(o.impact || '未填') + ';最晚决定日:' + (o.deadline ? fmt(o.deadline) : '未填') + (o.newDate ? ';新交期:' + fmt(o.newDate) : '') + '</span> ' +
+            (late ? '<span class="warn">来不及(已过最晚决定日)</span>' : '<button class="pri" data-act="choose" data-p="' + p.id + '" data-dec="' + dec.id + '" data-opt="' + o.id + '">选这个</button>') + '</div>';
+        }).join('');
+      } else if (it.kind === 'resched') {
+        body = '「' + d.name + '」现约定 ' + fmt(t.promised) + ',但前置任务的完成日已推到更晚,⚠ 日期冲突,需要重新约。';
+        acts = '<input type="date" id="sd-' + p.id + '-' + it.t + '"><button class="pri" data-act="set-date" ' + dd + '>改约</button>';
+      } else if (it.kind === 'setdate') {
+        body = '「' + d.name + '」前置已完成,还没有约定完成日(' + L.ROLE[d.holder] + ')。';
+        acts = '<input type="date" id="sd-' + p.id + '-' + it.t + '"><button data-act="set-date" ' + dd + '>约定</button>';
+      }
+      return '<div class="todo-item"><div>' + body + '</div>' + (acts ? '<div class="acts">' + acts + '</div>' : '') + '</div>';
+    }).join('');
+  }
+  const ROLE_NAME = r => L.ROLE[r] || '对方';
+
+  // ---------- 问题:待办卡片 / 全部问题与时间线 / 自己上报 ----------
+  const issueHead = i => '<b>' + esc(i.t ? '「' + L.TASK_BY_ID[i.t].name + '」' : '项目') + ' · ' + esc(i.kind) + '</b>:' + esc(i.text) + ' <span class="muted">(' + (i.by === 'owner' ? '你' : esc(ROLE_NAME(i.by))) + ' ' + fmt(i.at) + ' 报)</span>';
+  const affectText = i => i.affected.length ? '<div class="warn">影响:' + i.affected.map(id => esc(L.TASK_BY_ID[id].name)).join('、') + '</div>' : '';
+  function issueTodo(p, it) {
+    const i = L.issuesOf(p).find(x => x.id === it.issue);
+    const k = 'data-p="' + p.id + '" data-issue="' + i.id + '"';
+    let body = issueHead(i) + affectText(i), acts = '';
+    if (i.status === 'open') {
+      const notified = (p.msgs || []).filter(m => m.issue === i.id).map(m => ROLE_NAME(m.to));
+      if (notified.length) body += '<div class="muted">已通知:' + esc(notified.join('、')) + '</div>';
+      acts = '指派给 <select id="as-' + i.id + '"><option value="supplier">供应商</option><option value="builder">施工方</option><option value="customer">客户</option></select> ' +
+        '<input type="text" id="an-' + i.id + '" placeholder="要求,如:找替代货源" size="20"> <button class="pri" data-act="assign-issue" ' + k + '>指派处理</button> ' +
+        '<input type="date" id="cd-' + i.id + '"><button data-act="close-issue" ' + k + '>我已处理,关闭</button>';
+    } else {
+      const r = i.result;
+      body += '<div>' + esc(ROLE_NAME(r.by)) + '回复:' + esc(r.text) + (r.newDate ? ';新完成日 ' + fmt(r.newDate) : '') + '</div>';
+      acts = '<button class="pri" data-act="confirm-issue" ' + k + '>确认并关闭</button> <input type="text" id="rn-' + i.id + '" placeholder="退回原因" size="16"><button data-act="reject-issue" ' + k + '>退回</button>';
+    }
+    return '<div class="todo-item"><div>' + body + '</div><div class="acts">' + acts + '</div></div>';
+  }
+  function issuePanel(p) {
+    const list = L.issuesOf(p).slice().reverse();
+    let h = '';
+    if (!list.length) h += '<div class="empty">还没有上报过问题。</div>';
+    list.forEach(i => {
+      const waited = i.status === 'assigned' ? L.diff(state.today, i.assignedAt || i.at) : 0;
+      const nudge = i.status === 'assigned' ? ' <span class="muted">已等 ' + waited + ' 天' + (i.nudges ? ',催过 ' + i.nudges + ' 次' : '') + '</span> <button data-act="nudge-issue" data-p="' + p.id + '" data-issue="' + i.id + '"' + (i.nudgedAt === state.today ? ' disabled' : '') + '>' + (i.nudgedAt === state.today ? '今天催过了' : '催一下') + '</button>' : '';
+      h += '<div class="card" style="margin:8px 0"><div>' + issueHead(i) + ' <span class="tag">' + esc(L.ISSUE_LABEL[i.status]) + (i.assignee ? ' · ' + esc(ROLE_NAME(i.assignee)) : '') + '</span>' + nudge + '</div>' + affectText(i) +
+        '<ul class="log">' + i.timeline.map(e => '<li><span class="muted">' + fmt(e.at) + '</span> ' + esc(e.who) + ':' + esc(e.text) + '</li>').join('') + '</ul></div>';
+    });
+    const opts = '<option value="">不针对某个任务</option>' + L.TASKS.filter(d => !p.tasks[d.id].done).map(d => '<option value="' + d.id + '">' + esc(d.name) + '</option>').join('');
+    h += '<div style="margin-top:8px"><b>我来上报</b> <select id="ok-' + p.id + '">' + L.KINDS.map(k => '<option>' + esc(k) + '</option>').join('') + '</select> <select id="ot2-' + p.id + '">' + opts + '</select> ' +
+      '<input type="text" id="ox-' + p.id + '" placeholder="一句话说清楚" size="24"> <button data-act="owner-issue" data-p="' + p.id + '">上报</button></div>';
+    return h;
+  }
+
+  // ---------- 任务清单 ----------
+  function taskTable(p, s) {
+    let h = '<table><tr><th>#</th><th>任务</th><th>谁手上</th><th>状态</th><th>原约定</th><th>现约定</th><th>改期</th><th>要交什么</th><th>操作</th></tr>';
+    s.cells.forEach(c => {
+      const d = c.def, t = c.s;
+      const who = c.done ? '—' : c.ballOwner ? '负责人(待确认)' : L.ROLE[d.holder];
+      const cur = t.promised ? fmt(t.promised) : '<span class="warn">未约定时间</span>';
+      const pend = t.pending ? '<div class="warn">待确认 ' + fmt(t.pending.date) + '</div>' : '';
+      const hist = t.history.length > 1 ? '<div class="muted">' + t.history.map(fmt).join(' → ') + '</div>' : '';
+      let ops = '';
+      if (!c.done) {
+        if (d.holder === 'owner') ops += '<button data-act="owner-done" data-p="' + p.id + '" data-t="' + d.id + '"' + (c.ready ? '' : ' disabled title="前置没完成"') + '>标记完成</button> ';
+        if (!t.promised || d.holder === 'owner') ops += '<input type="date" id="sd-' + p.id + '-' + d.id + '" style="width:130px"><button data-act="set-date" data-p="' + p.id + '" data-t="' + d.id + '">' + (t.promised ? '改约' : '约定') + '</button>';
+      }
+      h += '<tr id="row-' + d.id + '"><td>' + d.id + '</td><td>' + esc(d.name) + '<div class="muted">' + esc(d.doer) + '</div></td><td>' + who + '</td>' +
+        '<td><span class="pill ' + c.status + '">' + esc(L.statusLabel(c)) + '</span>' + (c.conflict ? '<div class="warn">⚠ 日期冲突</div>' : '') + (c.dueToday ? '<div class="warn">今天到期</div>' : '') + '</td>' +
+        '<td>' + (t.original ? fmt(t.original) : '—') + '</td><td>' + cur + pend + hist + '</td><td>' + (t.changes ? '改过 ' + t.changes + ' 次' : '—') + '</td>' +
+        '<td class="muted">' + esc(d.deliver) + '</td><td>' + ops + '</td></tr>';
+    });
+    return h + '</table>';
+  }
+
+  // ---------- 付款 ----------
+  function payTable(p, s) {
+    let h = '<table><tr><th>节点</th><th>触发</th><th>本期金额</th><th>累计</th><th>应收日</th><th>状态</th><th>操作</th></tr>';
+    s.pays.forEach(x => {
+      const pay = x.pay;
+      const label = { received: '已收(' + fmt(pay.received) + ')', collectable: '可催,催' + esc(p.target), overdue: '逾期 ' + x.days + ' 天,催' + esc(p.target),
+        affected: '受影响(「' + esc(L.TASK_BY_ID[pay.trigger].name) + '」未完成,不可催)', notyet: '未到时间' }[x.state];
+      const cls = { received: 'done', collectable: 'doing', overdue: 'blocked', affected: 'affected', notyet: 'todo' }[x.state];
+      let ops = '';
+      if (x.state === 'collectable' || x.state === 'overdue') ops += '<button class="pri" data-act="pay" data-p="' + p.id + '" data-pay="' + pay.id + '">记一笔到账</button> ';
+      if (x.state === 'collectable' || x.state === 'overdue') {
+        const k = p.id + '-' + pay.id;
+        ops += '<div style="margin:4px 0"><select id="dc-' + k + '">' + ['微信', '电话', '邮件', '催款函', '当面'].map(c => '<option>' + c + '</option>').join('') + '</select> ' +
+          '<input type="text" id="dn-' + k + '" placeholder="对方怎么说" size="12" maxlength="60"> 承诺 <input type="date" id="dp-' + k + '" style="width:130px"> <button data-act="dun" data-p="' + p.id + '" data-pay="' + pay.id + '">记一次催款</button></div>';
+      }
+      if (x.state !== 'received') ops += '<input type="date" id="pd-' + p.id + '-' + pay.id + '" style="width:130px"><button data-act="pay-due" data-p="' + p.id + '" data-pay="' + pay.id + '">约应收日</button>';
+      h += '<tr><td>' + esc(pay.name) + '</td><td>任务 ' + pay.trigger + ' ' + esc(L.TASK_BY_ID[pay.trigger].name) + '</td><td>' + pay.amount + ' 万</td><td>' + pay.cum + '%</td><td>' + (pay.due ? fmt(pay.due) : '未约定') + '</td>' +
+        '<td><span class="pill ' + cls + '">' + label + '</span>' +
+        ((pay.duns || []).length ? '<div class="muted" style="margin-top:4px">' + pay.duns.map(d => '催过:' + fmt(d.at) + ' ' + esc(d.channel) + (d.promise ? ',承诺 ' + fmt(d.promise) : '') + (d.note ? ',' + esc(d.note) : '')).join('<br>') + '</div>' : '') +
+        '</td><td>' + ops + '</td></tr>';
+    });
+    return h + '</table>';
+  }
+
+  // ---------- 模拟对方操作 ----------
+  function simPanel(p, s) {
+    const roles = ['supplier', 'builder', 'customer'];
+    let h = '<div class="sim"><div class="tabs">' + roles.map(r => '<button class="' + (ui.role === r ? 'on' : '') + '" data-act="role" data-role="' + r + '">' + L.ROLE[r] + '</button>').join('') +
+      '<label style="margin-left:12px"><input type="checkbox" id="proxy" ' + (ui.proxy ? 'checked' : '') + '> 代录(对方在微信里回的,由我替他录)</label></div>';
+    const mine = s.cells.filter(c => !c.done && c.def.parties.includes(ui.role));
+    const ready = mine.filter(c => c.ready || c.s.problem);
+    const hidden = mine.length - ready.length;
+    if (!ready.length) h += '<div class="empty">' + L.ROLE[ui.role] + '现在没有要做的事。</div>';
+    ready.forEach(c => {
+      const d = c.def, t = c.s, k = p.id + '-' + d.id;
+      const dd = 'data-p="' + p.id + '" data-t="' + d.id + '" data-role="' + ui.role + '"';
+      h += '<div class="simtask"><b>' + d.id + ' ' + esc(d.name) + '</b> <span class="muted">约定 ' + (t.promised ? fmt(t.promised) : '未约定') + '</span> <span class="pill ' + c.status + '">' + esc(L.statusLabel(c)) + '</span>';
+      if (t.reportedDone) h += '<div class="muted">已报完成,等负责人确认。</div>';
+      else if (c.dec) h += '<div class="muted">已提交方案,等负责人选择。</div>';
+      else {
+        h += '<div class="acts" style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">' +
+          '<button data-act="x-done" ' + dd + '>做完了</button>' +
+          '<input type="date" id="xd-' + k + '"><button data-act="x-date" ' + dd + '>改日期</button>' +
+          '<input type="text" id="xr-' + k + '" placeholder="有什么问题" size="16"><button class="danger" data-act="x-problem" ' + dd + '>有问题</button></div>';
+        if (t.problem) {
+          h += '<div style="margin-top:8px"><b>提出方案</b>(最多填两个,影响由提出方填,系统不替你编)' + [1, 2].map(i =>
+            '<div style="margin-top:4px">方案' + i + ' <input type="text" id="ot-' + k + '-' + i + '" placeholder="做法" size="18"> <input type="text" id="oi-' + k + '-' + i + '" placeholder="预估影响" size="14"> 最晚决定日 <input type="date" id="od-' + k + '-' + i + '"> 新交期 <input type="date" id="on-' + k + '-' + i + '"></div>').join('') +
+            '<button data-act="x-propose" ' + dd + ' style="margin-top:6px">提交方案</button></div>';
+        }
+      }
+      h += '</div>';
+    });
+    if (hidden > 0) h += '<div class="muted">另有 ' + hidden + ' 件事前置没完成,暂不显示。</div>';
+    return h + '</div>';
+  }
+
+  // ---------- 项目页 ----------
+  function renderProject(id) {
+    const p = state.projects.find(x => x.id === id);
+    if (!p) return '<p>找不到项目。<a href="#">回首页</a></p>';
+    const s = L.summarize(p, state.today);
+    let h = '<a class="bk" href="#">← 回首页</a>';
+    h += '<h2 style="margin-top:0">' + esc(p.name) + ' <span class="muted" style="font-weight:400">' + esc(p.customer) + ',合同 ' + p.total + ' 万(模拟)</span></h2>';
+    h += '<div class="headline l' + s.level + '"><p><b>' + esc(s.line1) + '</b></p>' + (s.line2 ? '<p>' + esc(s.line2) + '</p>' : '') + (s.line3 ? '<p class="next">' + esc(s.line3) + '</p>' : '') + '</div>';
+    h += '<h2>全局进度</h2>' + flow(s);
+    h += '<p class="muted">' + (s.nextDate ? '下一个关键日期:' + fmt(s.nextDate.date) + ' ' + esc(L.TASK_BY_ID[s.nextDate.t].name) + (s.nextDate.pending ? '(待你确认)' : '') : '没有待到的约定日期') + '</p>';
+    h += '<h2>等你处理</h2>' + todoItems(p, s);
+    h += '<h2>问题与处理</h2>' + issuePanel(p);
+    h += '<h2>任务清单</h2>' + taskTable(p, s);
+    h += '<h2>付款节点</h2>' + payTable(p, s);
+    if (SERVER && links && links.links[p.id]) {
+      h += '<h2>发给对方的链接 <span class="tag">手机打开</span></h2><table><tr><th>对象</th><th>链接(只能看到自己的事)</th></tr>' +
+        ['supplier', 'builder', 'customer'].map(r => { const u = links.base + '/m/' + links.links[p.id][r]; return '<tr><td>' + L.ROLE[r] + '</td><td><a href="' + u + '" target="_blank">' + esc(u) + '</a></td></tr>'; }).join('') + '</table>';
+    }
+    h += '<h2>模拟对方操作 <span class="tag">演示用</span></h2>' + simPanel(p, s);
+    h += '<h2>记录</h2><ul class="log">' + (p.log.length ? p.log.slice(0, 15).map(e => '<li><span class="muted">' + fmt(e.at) + '</span> ' + esc(e.who) + ':' + esc(e.text) + (e.proxy ? ' <span class="tag">代录</span>' : '') + '</li>').join('') : '<li class="muted">还没有记录</li>') + '</ul>';
+    return h;
+  }
+
+  // ---------- 新建项目 ----------
+  function renderNew() {
+    const defs = L.PAY_DEFS;
+    return '<a class="bk" href="#">← 回首页</a><h2 style="margin-top:0">新建项目</h2>' +
+      '<p class="muted">任务按固定的 10 步主流程自动生成。付款挂在对应任务上,任务完成后才能催。</p>' +
+      '<div class="card" style="display:grid;gap:10px;max-width:520px">' +
+      '<label>项目名称<br><input type="text" id="nn" maxlength="30" placeholder="例如:D 商场" style="width:100%"></label>' +
+      '<label>客户<br><input type="text" id="nc" maxlength="30" placeholder="例如:某商场" style="width:100%"></label>' +
+      '<label>催款对象(客户的决策人)<br><input type="text" id="nt" maxlength="30" placeholder="例如:陈总" style="width:100%"></label>' +
+      '<label>合同金额(万元)<br><input type="number" id="nm" min="1" step="any" style="width:100%"></label>' +
+      '<div><b>付款节点(比例加起来要等于 100)</b></div>' +
+      defs.map((d, i) => '<label>' + esc(d.name) + ' <span class="muted">(任务 ' + d.trigger + ' ' + esc(L.TASK_BY_ID[d.trigger].name) + ' 完成后)</span> <input type="number" id="np' + i + '" min="0" max="100" step="1" value="' + d.pct + '" style="width:70px"> %</label>').join('') +
+      '<div><button class="pri" data-act="create-project">创建项目</button></div></div>';
+  }
+
+  function render() {
+    $('today').textContent = '模拟日期 ' + state.today;
+    const m = /^#p\/(\w+)/.exec(location.hash);
+    if (location.hash === '#new') { if (!document.getElementById('nn')) $('app').innerHTML = renderNew(); return; }
+    $('app').innerHTML = m ? renderProject(m[1]) : renderHome();
+    if (ui.flash) { alert(ui.flash); ui.flash = ''; }
+  }
+
+  // ---------- 事件 ----------
+  const val = id => { const e = $(id); return e ? e.value : ''; };
+  document.addEventListener('change', e => { if (e.target.id === 'proxy') ui.proxy = e.target.checked; });
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-act]'); if (!b || b.disabled) return;
+    const a = b.dataset.act, p = b.dataset.p, t = Number(b.dataset.t), k = p + '-' + t;
+    const ok = r => { Promise.resolve(r).then(v => { if (!v) alert('这个操作现在不能做(检查日期是否已填,或状态是否已变化)。'); }); };
+    if (a === 'advance') return dispatch({ type: 'ADVANCE_DAY', n: 1 });
+    if (a === 'reset') { if (confirm('重置为初始演示数据?')) dispatch({ type: 'RESET' }); return; }
+    if (a === 'role') { ui.role = b.dataset.role; return render(); }
+    if (a === 'goto') { const r = $('row-' + b.dataset.t); if (r) { r.scrollIntoView({ block: 'center' }); r.classList.add('hl'); setTimeout(() => r.classList.remove('hl'), 1500); } return; }
+    if (a === 'confirm-done') return ok(dispatch({ type: 'CONFIRM_DONE', p, t }));
+    if (a === 'reject-done') return ok(dispatch({ type: 'REJECT_DONE', p, t }));
+    if (a === 'confirm-date') return ok(dispatch({ type: 'CONFIRM_DATE', p, t }));
+    if (a === 'reject-date') return ok(dispatch({ type: 'REJECT_DATE', p, t }));
+    if (a === 'owner-done') return ok(dispatch({ type: 'OWNER_DONE', p, t }));
+    if (a === 'resolve-problem') return ok(dispatch({ type: 'RESOLVE_PROBLEM', p, t }));
+    if (a === 'set-date') return ok(dispatch({ type: 'SET_DATE', p, t, date: val('sd-' + k) }));
+    if (a === 'choose') return ok(dispatch({ type: 'CHOOSE', p, dec: b.dataset.dec, opt: b.dataset.opt }));
+    const iss = b.dataset.issue;
+    if (a === 'assign-issue') return ok(dispatch({ type: 'ASSIGN_ISSUE', p, issue: iss, assignee: val('as-' + iss), note: val('an-' + iss).trim() }));
+    if (a === 'nudge-issue') return ok(dispatch({ type: 'NUDGE_ISSUE', p, issue: iss }));
+    if (a === 'confirm-issue') return ok(dispatch({ type: 'CONFIRM_ISSUE', p, issue: iss }));
+    if (a === 'reject-issue') return ok(dispatch({ type: 'REJECT_ISSUE', p, issue: iss, note: val('rn-' + iss).trim() }));
+    if (a === 'close-issue') return ok(dispatch({ type: 'CLOSE_ISSUE', p, issue: iss, date: val('cd-' + iss) || null, text: '' }));
+    if (a === 'owner-issue') return ok(dispatch({ type: 'OWNER_ISSUE', p, t: Number(val('ot2-' + p)) || null, kind: val('ok-' + p), text: val('ox-' + p).trim() }));
+    if (a === 'create-project') {
+      const pcts = [0, 1, 2, 3].map(i => Number(val('np' + i)));
+      if (pcts.reduce((x, y) => x + y, 0) !== 100) return alert('四笔付款比例加起来要等于 100,现在是 ' + pcts.reduce((x, y) => x + y, 0));
+      const before = state.projects.length;
+      return Promise.resolve(dispatch({ type: 'CREATE_PROJECT', name: val('nn'), customer: val('nc'), target: val('nt'), total: val('nm'), pcts })).then(v => {
+        if (!v) return alert('请把名称、客户、催款对象、合同金额都填好。');
+        location.hash = '#p/' + state.projects[state.projects.length - 1].id;
+      });
+    }
+    if (a === 'copy-remind') {
+      const el = $('rt-' + b.dataset.i); if (!el) return;
+      const done = () => { b.textContent = '已复制'; setTimeout(() => { b.textContent = '复制'; }, 1500); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(el.textContent).then(done, () => { prompt('请手动复制:', el.textContent); });
+      else prompt('请手动复制:', el.textContent);
+      return;
+    }
+    if (a === 'dun') { const kk = p + '-' + b.dataset.pay; return ok(dispatch({ type: 'DUN_PAY', p, pay: b.dataset.pay, channel: val('dc-' + kk), note: val('dn-' + kk), promise: val('dp-' + kk) || null })); }
+    if (a === 'pay') return ok(dispatch({ type: 'RECORD_PAY', p, pay: b.dataset.pay }));
+    if (a === 'pay-due') return ok(dispatch({ type: 'SET_PAY_DUE', p, pay: b.dataset.pay, date: val('pd-' + p + '-' + b.dataset.pay) }));
+    const role = b.dataset.role, proxy = ui.proxy;
+    if (a === 'x-done') return ok(dispatch({ type: 'REPORT_DONE', p, t, role, proxy }));
+    if (a === 'x-date') return ok(dispatch({ type: 'REPORT_DATE', p, t, role, proxy, date: val('xd-' + k) }));
+    if (a === 'x-problem') return ok(dispatch({ type: 'REPORT_PROBLEM', p, t, role, proxy, reason: val('xr-' + k).trim() }));
+    if (a === 'x-propose') {
+      const options = [1, 2].map(i => ({ text: val('ot-' + k + '-' + i).trim(), impact: val('oi-' + k + '-' + i).trim(), deadline: val('od-' + k + '-' + i) || null, newDate: val('on-' + k + '-' + i) || null }));
+      return ok(dispatch({ type: 'PROPOSE', p, t, role, proxy, options }));
+    }
+  });
+  window.addEventListener('hashchange', () => { window.scrollTo(0, 0); render(); });
+  render();
+})();
+</script>
+</body>
+</html>

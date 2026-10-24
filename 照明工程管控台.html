@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>照明工程管控台</title>
+<style>
+:root{--ac:#1d4ed8;--ac2:#eff4ff;--bg:#f4f5f8;--bd:#e3e7ee;--tx:#1b2333;--mu:#667085;--ok:#15803d;--warn:#b45309;--bad:#c2410c;--red:#b91c1c}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.65 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--tx)}
+.bar{background:#fff;border-bottom:1px solid var(--bd);position:sticky;top:0;z-index:5}
+.bar-in{max-width:980px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.brand{font-weight:700;font-size:16px;cursor:pointer}
+.menu{display:flex;gap:4px}
+.menu button{border:0;background:none;padding:6px 12px;border-radius:7px;color:var(--mu)}
+.menu button.on{background:var(--ac2);color:var(--ac);font-weight:600}
+.who{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.lab{font-size:13px;color:var(--mu)}
+.seg{display:inline-flex;border:1px solid var(--bd);border-radius:8px;overflow:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--bd);padding:5px 12px}
+.seg button:last-child{border-right:0}
+.page{max-width:980px;margin:0 auto;padding:22px 20px 70px}
+button{font:inherit;cursor:pointer;border:1px solid var(--bd);background:#fff;padding:7px 16px;border-radius:8px;color:var(--tx)}
+button:hover{border-color:var(--ac);color:var(--ac)}
+button.pri{background:var(--ac);border-color:var(--ac);color:#fff}
+button.pri:hover{background:#1e40af;color:#fff}
+button.sel{background:var(--ac);color:#fff;border-color:var(--ac)}
+button.danger{color:var(--red)}
+button.link{border:0;background:none;color:var(--ac);padding:0}
+button.chip{border-radius:16px;padding:4px 14px;font-size:13px}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:disabled:hover{border-color:var(--bd);color:var(--tx)}
+.card{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:18px 20px;margin-bottom:16px}
+h1{font-size:20px;margin:0}
+h2{font-size:15px;margin:22px 0 10px;color:var(--mu);font-weight:600}
+h2:first-child{margin-top:0}
+h3{font-size:15px;margin:0 0 8px}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.sp{justify-content:space-between}
+.mu{color:var(--mu);font-size:13px}
+.badge{display:inline-block;padding:1px 10px;border-radius:10px;font-size:12px;font-weight:600;white-space:nowrap;margin-left:6px}
+.b-ok{background:#dcfce7;color:var(--ok)}.b-warn{background:#fef3c7;color:var(--warn)}.b-bad{background:#ffedd5;color:var(--bad)}.b-red{background:#fee2e2;color:var(--red)}.b-gray{background:#eef0f4;color:var(--mu)}.b-blue{background:#dbeafe;color:#1d4ed8}
+.sum{display:flex;gap:26px;flex-wrap:wrap}
+.sum div{font-size:13px;color:var(--mu)}
+.sum b{display:block;font-size:24px;color:var(--tx);line-height:1.2}
+.sum .hot b{color:var(--red)}
+.task{display:flex;gap:14px;align-items:center;justify-content:space-between;padding:13px 16px;border-radius:10px;margin-bottom:9px;border:1px solid var(--bd);border-left-width:5px;background:#fff;cursor:pointer}
+.task:hover{border-color:var(--ac)}
+.task.red{border-left-color:var(--red);background:#fff8f8}
+.task.act{border-left-color:#f59e0b;background:#fffdf5}
+.task.wait{border-left-color:#cbd2de;background:#fafbfc}
+.task b{display:block}
+.empty{padding:22px;text-align:center;color:var(--ok);background:#f4fbf6;border-radius:10px}
+.hint{background:#fff8e1;border:1px solid #fde4a3;color:#7c4a03;border-radius:10px;padding:11px 16px;margin-bottom:16px;font-weight:500}
+.notice{padding:11px 16px;border-radius:10px;margin-bottom:16px}
+.n-ok{background:#dcfce7;color:var(--ok)}.n-no{background:#fee2e2;color:var(--red)}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:10px;border-bottom:1px solid var(--bd);vertical-align:top}
+th{font-size:12px;color:var(--mu);font-weight:600}
+tr.click{cursor:pointer}tr.click:hover td{background:var(--ac2)}
+input[type=text],input[type=number],select{font:inherit;padding:7px 10px;border:1px solid var(--bd);border-radius:8px;width:100%;background:#fff}
+input:focus,select:focus{outline:2px solid #bfd3ff;border-color:var(--ac)}
+.f{margin-bottom:12px}.f>.mu{margin-bottom:3px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.grid2{grid-template-columns:1fr}}
+.steps{display:flex;gap:4px;margin:12px 0}
+.steps span{flex:1;text-align:center;padding:5px;font-size:12px;background:#eef0f4;color:var(--mu);border-radius:5px}
+.steps span.on{background:var(--ac);color:#fff}.steps span.done{background:#dbeafe;color:#1d4ed8}
+.info{background:var(--ac2);border:1px solid #c7d7fe;border-radius:10px;padding:11px 14px;margin:10px 0}
+.lock{background:#fee2e2;border:1px solid #fecaca;border-radius:10px;padding:11px 14px;margin:10px 0;color:var(--red)}
+ul{padding-left:18px;margin:4px 0}
+.log{list-style:none;padding:0;margin:0}.log li{padding:9px 0;border-bottom:1px dashed var(--bd)}
+.back{margin-bottom:14px}
+.ext{max-width:480px;margin:0 auto}
+.url{background:#eef0f4;border-radius:8px;padding:6px 12px;font-family:Consolas,monospace;font-size:12px;color:var(--mu);margin-bottom:12px}
+</style>
+</head>
+<body>
+<div class="bar"><div class="bar-in" id="top"></div></div>
+<div class="page" id="main"></div>
+
+<script>
+/* ======================================================================
+   纯逻辑:一切都是"事项"。没有 DOM。
+   事项 = 什么事 / 谁手上 / 对方回应没有 / 它在等谁 / 它拖住谁
+   ====================================================================== */
+const Logic = (() => {
+  const PARTIES = {owner:'负责人', supplier:'供应商', construction:'施工方', client:'客户'};
+  const KINDS = ['延期','安全','变更','返工','验收','回款','采购','到货','施工','其他'];
+  const PRESETS = [
+    {name:'供应商延期', kind:'延期', holder:'supplier', title:'供应商延期:请给出新到货日'},
+    {name:'客户拖款',   kind:'回款', holder:'client',   title:'款项逾期:请决策领导确认付款时间'},
+    {name:'现场返工',   kind:'返工', holder:'construction', title:'现场返工:说明原因和完成时间'},
+    {name:'客户要改方案', kind:'变更', holder:'client', title:'客户提出变更:确认范围和费用'},
+    {name:'验收没过',   kind:'验收', holder:'construction', title:'验收未通过:按意见整改'},
+    {name:'临时换人',   kind:'其他', holder:'construction', title:'施工人员更换:补交人员信息'}
+  ];
+  const WAIT_LIMIT = 3; // 在对方手上超过这么多天,提醒负责人
+
+  const ext = h => h !== 'owner';
+  const itemOf = (s,id) => s.items.find(x => x.id === id);
+  const projOf = (s,id) => s.projects.find(x => x.id === id);
+  const blockers = (s,it) => s.items.filter(x => x.state !== 'closed' && x.blocks.includes(it.id));
+  const days = (s,it) => s.today - it.since;
+  const overdue = (s,it) => it.state !== 'closed' && it.due < s.today ? s.today - it.due : 0;
+  function downstream(s,id){
+    const seen = new Set(), q = [id];
+    while (q.length){ const it = itemOf(s,q.shift()); if (!it) continue;
+      it.blocks.forEach(b => { if (!seen.has(b)){ seen.add(b); q.push(b); } }); }
+    return [...seen];
+  }
+  /* 需要负责人关注 = 没被前置事项挡住 且 (在你手上 / 对方已回应 / 红线 / 超期 / 在对方手上太久) */
+  function attention(s,it){
+    if (it.state === 'closed' || blockers(s,it).length) return false;
+    return it.holder === 'owner' || it.state === 'claimed' || it.redline || overdue(s,it) > 0 || days(s,it) >= WAIT_LIMIT;
+  }
+  const waiting = (s,it) => it.state !== 'closed' && blockers(s,it).length > 0;
+  function projectInfo(s,pid){
+    const its = s.items.filter(i => i.pid === pid);
+    return {attention: its.filter(i => attention(s,i)).length, redline: its.filter(i => attention(s,i) && i.redline).length,
+            open: its.filter(i => i.state !== 'closed').length};
+  }
+  function payState(s,p){
+    if (p.received) return {t:'已收', c:'b-ok'};
+    const g = p.gate && itemOf(s,p.gate);
+    if (g && g.state !== 'closed') return {t:`未触发(等「${g.title}」)`, c:'b-gray'};
+    return s.today > p.due ? {t:`可催收 · 已逾期 ${s.today - p.due} 天`, c:'b-red'} : {t:'可催收', c:'b-warn'};
+  }
+  const collectible = (s,p) => !p.received && !(p.gate && itemOf(s,p.gate) && itemOf(s,p.gate).state !== 'closed');
+
+  function mkItem(s,o){
+    const it = {id:'i' + (++s.seq), pid:o.pid, title:o.title, kind:o.kind || '其他', holder:o.holder, since:s.today, due:s.today + (o.due ?? 7),
+      state:'open', redline:!!o.redline, blocks:o.blocks || [], token:null, note:'', rejectReason:'', claimedBy:null};
+    if (ext(it.holder)) it.token = 'T' + (++s.seq);
+    s.items.push(it); return it;
+  }
+  function log(s,actor,text,itemId){ s.log.push({n:s.log.length + 1, day:s.today, actor, text, itemId:itemId || null}); }
+
+  /* 模板:签约后一键生成标准事项和付款节点 */
+  function buildProject(s,o){
+    const pid = 'p' + (++s.seq);
+    s.projects.push({id:pid, name:o.name, client:o.client || (o.name + '业主'), contract:o.contract, cost:Math.round(o.contract * 0.76), high:!!o.high,
+      decisionMaker:{name:'王总(模拟)', phone:'138-0000-0000'}});
+    const accept  = mkItem(s,{pid, title:'客户验收', kind:'验收', holder:'client', due:22});
+    const install = mkItem(s,{pid, title:o.high ? '高空安装施工' : '现场安装施工', kind:'施工', holder:'construction', due:18, blocks:[accept.id]});
+    const auth    = mkItem(s,{pid, title:'授权开工', kind:'施工', holder:'owner', due:12, blocks:[install.id]});
+    const arrival = mkItem(s,{pid, title:'到货核对', kind:'到货', holder:'construction', due:12, blocks:[auth.id]});
+    mkItem(s,{pid, title:'采购下单', kind:'采购', holder:'owner', due:3, blocks:[arrival.id]});
+    const dep = mkItem(s,{pid, title:'收定金', kind:'回款', holder:'client', due:5});
+    if (o.high) [['保险生效','owner'],['安全交底','construction'],['工人装备照片回传','construction'],['正规安装公司合同','owner']]
+      .forEach(([t,h]) => mkItem(s,{pid, title:'安全卡:' + t, kind:'安全', holder:h, due:8, redline:true, blocks:[auth.id]}));
+    [['定金',30,5,dep.id],['到场款',50,14,arrival.id],['验收款',10,25,accept.id],['质保金',10,120,accept.id]]
+      .forEach(([n,pct,d,g]) => s.payments.push({id:'y' + (++s.seq), pid, name:n, pct, due:s.today + d, received:false, gate:g}));
+    return pid;
+  }
+
+  function initial(){
+    const s = {seq:0, today:10, notice:null, projects:[], items:[], payments:[], log:[]};
+    const T = (pid,t) => s.items.find(i => i.pid === pid && i.title === t);
+    const P = (pid,n) => s.payments.find(p => p.pid === pid && p.name === n);
+    const close = (pid,t) => { T(pid,t).state = 'closed'; T(pid,t).token = null; };
+    const age = (pid,t,since) => { T(pid,t).since = since; };
+
+    const a = buildProject(s,{name:'某酒店高空灯具改造(模拟)', client:'某酒店(模拟)', contract:500000, high:true});
+    close(a,'收定金'); P(a,'定金').received = true; close(a,'采购下单'); close(a,'安全卡:保险生效');
+    age(a,'到货核对',9); age(a,'安全卡:安全交底',6); age(a,'安全卡:工人装备照片回传',6); age(a,'安全卡:正规安装公司合同',5);
+    T(a,'到货核对').due = 12;
+
+    const b = buildProject(s,{name:'某医院走廊照明改造(模拟)', client:'某医院(模拟)', contract:1200000, high:false});
+    ['收定金','采购下单','到货核对','授权开工'].forEach(t => close(b,t)); P(b,'定金').received = true;
+    P(b,'到场款').due = 5; age(b,'现场安装施工',9);
+    mkItem(s,{pid:b, title:'到场款逾期:请决策领导确认付款时间', kind:'回款', holder:'client', due:-2}).since = 6;
+    mkItem(s,{pid:b, title:'3 号走廊色温不一致,返工', kind:'返工', holder:'construction', due:2, blocks:[T(b,'客户验收').id]}).since = 8;
+
+    const c = buildProject(s,{name:'某工厂节能技改(模拟)', client:'某工厂(模拟)', contract:860000, high:false});
+    ['收定金','采购下单','到货核对','授权开工','现场安装施工'].forEach(t => close(c,t));
+    P(c,'定金').received = true; P(c,'到场款').received = true; age(c,'客户验收',9);
+    s.seq += 0; return s;
+  }
+
+  const no  = (s,t) => { s.notice = {ok:false, text:t}; return s; };
+  const yes = (s,t) => { s.notice = {ok:true,  text:t}; return s; };
+
+  function reduce(prev,a){
+    const s = structuredClone(prev); s.notice = null;
+    const it = a.id ? itemOf(s,a.id) : null;
+    switch (a.type){
+      case 'ADVANCE_DAY': s.today += 1; return yes(s, `已推进到第 ${s.today} 天。注意哪些事项"卡的天数"变多了。`);
+
+      case 'CREATE_ITEM': {
+        if (!projOf(s,a.pid)) return no(s,'请选择项目。');
+        if (!a.title || !a.title.trim()) return no(s,'请写清楚是什么事。');
+        if (!PARTIES[a.holder]) return no(s,'请选择谁来办。');
+        const due = Number.isFinite(+a.due) ? +a.due : 7;
+        const blocks = a.blocks ? [a.blocks] : [];
+        if (blocks.some(b => !itemOf(s,b))) return no(s,'选择的被拖住事项不存在。');
+        const n = mkItem(s,{pid:a.pid, title:a.title.trim(), kind:a.kind, holder:a.holder, due, blocks, redline:!!a.redline});
+        log(s, '负责人', `新建事项「${n.title}」,交给${PARTIES[n.holder]}` + (blocks.length ? `,它会拖住「${itemOf(s,blocks[0]).title}」` : ''), n.id);
+        s.createdId = n.id;
+        return yes(s, ext(n.holder) ? `已创建,并生成发给${PARTIES[n.holder]}的链接。切到「${PARTIES[n.holder]}」视角可以看到。` : '已创建,在你自己手上。');
+      }
+      case 'HANDOFF': {
+        if (!it || it.state === 'closed') return no(s,'事项不存在或已关闭。');
+        if (!PARTIES[a.to]) return no(s,'请选择转给谁。');
+        if (a.to === it.holder && it.state === 'open') return no(s,`已经在${PARTIES[a.to]}手上了。`);
+        it.holder = a.to; it.since = s.today; it.state = 'open'; it.claimedBy = null;
+        it.token = ext(a.to) ? 'T' + (++s.seq) : null;
+        log(s, '负责人', `把「${it.title}」转给${PARTIES[a.to]}`, it.id);
+        return yes(s, ext(a.to) ? `已转给${PARTIES[a.to]},链接已生成。切到「${PARTIES[a.to]}」视角可以看到。` : '已转回自己。');
+      }
+      case 'RESPOND_DONE': {
+        if (!it || !ext(it.holder) || it.state !== 'open' || it.token !== a.token) return no(s,'这个链接已失效(已处理或已被替换)。');
+        it.claimedBy = it.holder; it.holder = 'owner'; it.state = 'claimed'; it.since = s.today; it.token = null;
+        it.note = (a.note || '').trim(); it.rejectReason = '';
+        log(s, PARTIES[it.claimedBy], `回应「${it.title}」:已完成${it.note ? '(' + it.note + ')' : ''}。待负责人核实`, it.id);
+        return yes(s,'已提交,等负责人核实。');
+      }
+      case 'RESPOND_BACK': {
+        if (!it || !ext(it.holder) || it.state !== 'open' || it.token !== a.token) return no(s,'这个链接已失效(已处理或已被替换)。');
+        if (!a.reason || !a.reason.trim()) return no(s,'做不了请写明原因。');
+        const who = PARTIES[it.holder];
+        log(s, who, `退回「${it.title}」:${a.reason.trim()}`, it.id);
+        it.holder = 'owner'; it.state = 'open'; it.since = s.today; it.token = null; it.note = a.reason.trim();
+        return yes(s,'已退回给负责人。');
+      }
+      case 'CONFIRM': {
+        if (!it || it.state === 'closed') return no(s,'事项不存在或已关闭。');
+        if (it.holder !== 'owner' && it.state !== 'claimed') return no(s,`还在${PARTIES[it.holder]}手上。等对方回应,或者先转回自己再关闭。`);
+        const bl = blockers(s,it);
+        if (bl.length) return no(s,`不能关闭,前置事项没完成:${bl.map(b => b.title).join('、')}`);
+        it.state = 'closed'; it.token = null;
+        log(s, '负责人', `核实并关闭「${it.title}」`, it.id);
+        const freed = s.items.filter(x => it.blocks.includes(x.id) && x.state !== 'closed' && !blockers(s,x).length);
+        return yes(s, freed.length ? `已关闭。「${freed.map(f => f.title).join('、')}」现在可以推进了。` : '已关闭。');
+      }
+      case 'REJECT': {
+        if (!it || it.state !== 'claimed') return no(s,'这件事没有待核实的回应。');
+        if (!a.reason || !a.reason.trim()) return no(s,'驳回必须写明原因。');
+        it.holder = it.claimedBy; it.state = 'open'; it.since = s.today; it.token = 'T' + (++s.seq); it.rejectReason = a.reason.trim();
+        log(s, '负责人', `驳回「${it.title}」:${it.rejectReason}`, it.id);
+        return yes(s, `已驳回,并重新发给${PARTIES[it.holder]}。`);
+      }
+      case 'RECEIVE_PAYMENT': {
+        const p = s.payments.find(x => x.id === a.payId);
+        if (!p || !collectible(s,p)) return no(s,'这个节点还没触发,不能标记已收。');
+        p.received = true; log(s, '负责人', `确认收到「${p.name}」`);
+        return yes(s,'已标记收到。');
+      }
+      case 'ADD_PROJECT': {
+        if (!a.name || !a.name.trim()) return no(s,'请填项目名称。');
+        if (!(+a.contract > 0)) return no(s,'请填合同金额。');
+        const pid = buildProject(s,{name:a.name.trim(), contract:Math.round(+a.contract), high:!!a.high});
+        log(s, '负责人', `按模板创建项目「${a.name.trim()}」`);
+        s.createdProject = pid;
+        return yes(s,'已按模板生成标准事项和付款节点。');
+      }
+      default: return s;
+    }
+  }
+  return {PARTIES, KINDS, PRESETS, WAIT_LIMIT, initial, reduce, itemOf, projOf, blockers, downstream, days, overdue, attention, waiting, projectInfo, payState, collectible};
+})();
+
+/* ======================================================================
+   页面(一次性外壳)
+   ====================================================================== */
+const KEY = 'lighting-console-v3';
+function loadState(){ try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.items) { s.notice = null; return s; } } catch(e){} return Logic.initial(); }
+function saveState(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+let S = loadState();
+const ui = Object.assign({role:'owner', page:'home', filter:'all', pid:null, itemId:null, form:{}, showDone:false, showCalm:false},
+  (() => { try { return JSON.parse(sessionStorage.getItem(KEY + '-ui')) || {}; } catch(e){ return {}; } })());
+const saveUi = () => { try { sessionStorage.setItem(KEY + '-ui', JSON.stringify(ui)); } catch(e){} };
+const $ = id => document.getElementById(id);
+const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const val = id => { const e = $(id); return e ? e.value : ''; };
+const PN = Logic.PARTIES;
+const ROLE_ORDER = ['owner','supplier','construction','client'];
+const money = n => '¥' + n.toLocaleString();
+const pj = id => Logic.projOf(S,id);
+const it_ = id => Logic.itemOf(S,id);
+const D = a => { S = Logic.reduce(S,a); saveState(); };
+
+function attentionList(pid){
+  return S.items.filter(i => Logic.attention(S,i) && (!pid || i.pid === pid))
+    .sort((a,b) => (b.redline - a.redline) || ((b.state === 'claimed') - (a.state === 'claimed')) || (Logic.days(S,b) - Logic.days(S,a)));
+}
+const calmList = pid => S.items.filter(i => i.state !== 'closed' && !Logic.attention(S,i) && !Logic.waiting(S,i) && (!pid || i.pid === pid));
+const laterList = pid => S.items.filter(i => Logic.waiting(S,i) && (!pid || i.pid === pid));
+
+function row(i, showProject = true){
+  const od = Logic.overdue(S,i), d = Logic.days(S,i);
+  const tone = i.redline ? 'red' : i.holder === 'owner' ? 'act' : 'wait';
+  const btn = i.state === 'claimed' ? '去核实' : i.holder === 'owner' ? '去处理' : '看详情';
+  return `<div class="task ${tone}" data-act="openitem" data-id="${i.id}"><div>
+    <b>${esc(i.title)}${i.redline ? '<span class="badge b-red">红线</span>' : ''}${i.state === 'claimed' ? `<span class="badge b-blue">${PN[i.claimedBy]}已回应,等你核实</span>` : ''}</b>
+    <span class="mu">${showProject ? esc(pj(i.pid).name) + ' · ' : ''}${i.state === 'claimed' ? '等你核实' : '在' + PN[i.holder] + '手上'} ${d} 天${od ? ` · <span style="color:var(--red)">超期 ${od} 天</span>` : ''}</span>
+  </div><button class="${i.holder === 'owner' ? 'pri' : ''}" data-act="openitem" data-id="${i.id}">${btn}</button></div>`;
+}
+
+/* ---------- 提示 ---------- */
+function hint(){
+  if (ui.role === 'owner'){
+    const att = attentionList(), cl = att.filter(i => i.state === 'claimed').length;
+    if (cl) return `有 ${cl} 件对方已回应,等你核实。点最上面的。`;
+    if (att.length) return '先从最上面的一件开始,红线的永远排在最前面。';
+    return '';
+  }
+  const n = S.items.filter(i => i.holder === ui.role && i.token && i.state === 'open').length;
+  return n ? `有 ${n} 件事等你处理,点"打开"。` : '';
+}
+
+/* ---------- 总览 ---------- */
+function pHome(){
+  const att = attentionList(), red = att.filter(i => i.redline).length, cl = att.filter(i => i.state === 'claimed').length;
+  const f = ui.filter;
+  const list = att.filter(i => f === 'all' ? true : f === 'mine' ? i.holder === 'owner' : f === 'others' ? i.holder !== 'owner' : i.redline);
+  const calm = calmList(), later = laterList();
+  const h = hint();
+  return `
+  <div class="card"><div class="sum">
+    <div><b>${S.projects.length}</b>在管项目</div>
+    <div class="${att.length ? 'hot' : ''}"><b>${att.length}</b>需要关注</div>
+    <div class="${red ? 'hot' : ''}"><b>${red}</b>红线</div>
+    <div class="${cl ? 'hot' : ''}"><b>${cl}</b>等你核实</div>
+    <div style="margin-left:auto;align-self:center"><button class="pri" data-act="newitem">+ 新建事项</button></div>
+  </div></div>
+  ${h ? `<div class="hint">👉 ${h}</div>` : ''}
+  <h2>需要你关注的事</h2>
+  <div class="row" style="margin-bottom:12px">${[['all','全部'],['mine','在我手上'],['others','在别人手上'],['red','红线']].map(([k,l]) => `<button class="chip ${f === k ? 'sel' : ''}" data-act="filter" data-k="${k}">${l}</button>`).join('')}</div>
+  ${list.length ? list.map(i => row(i)).join('') : '<div class="empty">✓ 没有需要你关注的事</div>'}
+  ${calm.length ? `<div class="mu" style="margin-top:6px">另有 ${calm.length} 件在正常推进,不用管。<button class="link" data-act="togglecalm">${ui.showCalm ? '收起' : '展开看看'}</button></div>` : ''}
+  ${ui.showCalm ? calm.map(i => row(i)).join('') : ''}
+  ${later.length ? `<div class="mu">还有 ${later.length} 件在等前置事项,时候没到。</div>` : ''}
+  <h2>项目</h2>
+  <div class="card" style="padding:6px 20px"><table>${S.projects.map(p => { const info = Logic.projectInfo(S,p.id), pay = S.payments.filter(x => x.pid === p.id && !x.received)[0];
+    return `<tr class="click" data-act="openproj" data-id="${p.id}"><td><b>${esc(p.name)}</b><div class="mu">合同 ${money(p.contract)}</div></td>
+      <td>${info.redline ? `<span class="badge b-red">红线 ${info.redline}</span>` : info.attention ? `<span class="badge b-warn">${info.attention} 件需关注</span>` : '<span class="badge b-ok">一切正常</span>'}</td>
+      <td class="mu">${pay ? '下一笔:' + pay.name + ' ' + money(p.contract * pay.pct / 100) : '款已收齐'}</td></tr>`; }).join('')}</table></div>
+  <h2>新项目?按模板一键生成</h2>
+  <div class="card"><div class="grid2">
+    <div class="f"><div class="mu">项目名称</div><input type="text" data-form="np_name" value="${esc(ui.form.np_name || '')}" placeholder="如:某学校教室灯具更换"></div>
+    <div class="f"><div class="mu">合同金额(元)</div><input type="number" data-form="np_contract" value="${esc(ui.form.np_contract || '300000')}"></div></div>
+    <label class="row" style="margin-bottom:12px"><input type="checkbox" data-form="np_high" ${ui.form.np_high ? 'checked' : ''}> 高空作业(自动加上安全卡四项红线)</label>
+    <button data-act="addproj">生成项目</button>
+    <div class="mu" style="margin-top:8px">会自动生成:采购下单、到货核对、授权开工、安装施工、客户验收,以及 30%/50%/10%/10% 四个付款节点。你只改和标准不一样的地方。</div></div>`;
+}
+
+/* ---------- 项目页 ---------- */
+function pProject(){
+  const p = pj(ui.pid); if (!p) return '<div class="card">项目不存在。</div>';
+  const att = attentionList(p.id), calm = calmList(p.id), later = laterList(p.id), done = S.items.filter(i => i.pid === p.id && i.state === 'closed');
+  const info = Logic.projectInfo(S,p.id);
+  return `<div class="back"><button data-act="goto" data-page="home">← 返回总览</button></div>
+  <div class="card"><div class="row sp"><div><h1>${esc(p.name)}</h1><div class="mu">业主:${esc(p.client)} · 合同 ${money(p.contract)}${p.high ? ' · 高空作业' : ''}</div></div>
+    ${info.redline ? `<span class="badge b-red">红线 ${info.redline}</span>` : info.attention ? `<span class="badge b-warn">${info.attention} 件需关注</span>` : '<span class="badge b-ok">一切正常</span>'}</div></div>
+  <h2>需要关注</h2>
+  ${att.length ? att.map(i => row(i,false)).join('') : '<div class="empty">✓ 这个项目没有需要关注的事</div>'}
+  ${calm.length ? `<h2>正常推进中</h2>${calm.map(i => row(i,false)).join('')}` : ''}
+  ${later.length ? `<h2>在等前置事项(时候没到)</h2>${later.map(i => `<div class="task wait" data-act="openitem" data-id="${i.id}"><div><b>${esc(i.title)}</b><span class="mu">等:${Logic.blockers(S,i).map(b => esc(b.title)).join('、')}</span></div></div>`).join('')}` : ''}
+  <div class="row" style="margin:12px 0"><button class="pri" data-act="newitem" data-pid="${p.id}">+ 在此项目新建事项</button>
+    <button class="link" data-act="toggledone">${ui.showDone ? '收起已完成' : `查看已完成(${done.length})`}</button></div>
+  ${ui.showDone ? `<div class="card"><ul>${done.map(i => `<li>${esc(i.title)}</li>`).join('') || '<li>暂无</li>'}</ul></div>` : ''}
+  <h2>付款节点</h2>
+  <div class="card"><table><tr><th>节点</th><th>金额</th><th>应收日</th><th>状态</th><th></th></tr>${S.payments.filter(x => x.pid === p.id).map(x => { const st = Logic.payState(S,x);
+    return `<tr><td>${x.name} (${x.pct}%)</td><td>${money(p.contract * x.pct / 100)}</td><td>第 ${x.due} 天</td><td><span class="badge ${st.c}" style="margin:0">${st.t}</span></td>
+      <td>${Logic.collectible(S,x) ? `<button data-act="receive" data-pay="${x.id}">标记已收</button>` : ''}</td></tr>`; }).join('')}</table>
+    <div class="mu" style="margin-top:8px">付款节点挂在事项上:对应事项关闭后才能催款。催款对象:<b>${esc(p.decisionMaker.name)} ${esc(p.decisionMaker.phone)}</b>(决策领导,不催业务员)。</div></div>`;
+}
+
+/* ---------- 事项详情 ---------- */
+function actionsHtml(i){
+  if (i.state === 'closed') return '<div class="notice n-ok">已关闭。</div>';
+  const bl = Logic.blockers(S,i);
+  const lock = bl.length ? `<div class="lock">前置事项没完成,现在不能关闭:${bl.map(b => `<a href="#" data-act="openitem" data-id="${b.id}">${esc(b.title)}</a>`).join('、')}</div>` : '';
+  const opts = Object.entries(PN).filter(([k]) => k !== i.holder).map(([k,v]) => `<option value="${k}">${v}</option>`).join('');
+  const handoff = `<div class="row" style="margin-top:14px"><span class="mu">换个人办</span><div style="width:150px"><select id="f-to">${opts}</select></div><button data-act="handoff" data-id="${i.id}">转过去</button></div>`;
+  if (i.state === 'claimed') return `<div class="info"><b>${PN[i.claimedBy]}说已完成</b>${i.note ? ':' + esc(i.note) : ''}<br><span class="mu">对方说的只算"声称",你核实后才算数。</span></div>${lock}
+    <button class="pri" data-act="confirm" data-id="${i.id}" ${bl.length ? 'disabled' : ''}>核实无误,关闭</button>
+    <div style="margin-top:14px"><input type="text" id="f-reason" placeholder="不满意?写明原因再驳回"><div style="margin-top:8px"><button class="danger" data-act="reject" data-id="${i.id}">驳回,让${PN[i.claimedBy]}重做</button></div></div>`;
+  if (i.holder === 'owner') return `${i.note ? `<div class="info">${i.rejectReason ? '' : '上次备注:'}${esc(i.note)}</div>` : ''}${lock}
+    <button class="pri" data-act="confirm" data-id="${i.id}" ${bl.length ? 'disabled' : ''}>我已处理,关闭</button>${handoff}`;
+  return `<div class="info">现在在<b>${PN[i.holder]}</b>手上,等他回应(链接已发)。${i.rejectReason ? `<br>上次被你驳回:${esc(i.rejectReason)}` : ''}</div>
+    <button data-act="handoff" data-id="${i.id}" data-to="owner">先转回自己</button>${handoff}`;
+}
+function pItem(){
+  const i = it_(ui.itemId); if (!i) return '<div class="card">事项不存在。</div>';
+  const p = pj(i.pid), dn = Logic.downstream(S,i.id), bl = Logic.blockers(S,i);
+  const dnItems = dn.map(id => it_(id)).filter(x => x.state !== 'closed');
+  const dnPay = S.payments.filter(x => !x.received && (x.gate === i.id || dn.includes(x.gate)));
+  const idx = i.state === 'open' ? 0 : i.state === 'claimed' ? 1 : 2;
+  const od = Logic.overdue(S,i);
+  const logs = S.log.filter(l => l.itemId === i.id).slice().reverse();
+  return `<div class="back"><button data-act="goto" data-page="${ui.pid ? 'project' : 'home'}">← 返回</button></div>
+  <div class="card"><div class="row sp"><h1>${esc(i.title)}</h1><div><span class="badge b-gray">${i.kind}</span>${i.redline ? '<span class="badge b-red">红线</span>' : ''}</div></div>
+    <div class="mu"><a href="#" data-act="openproj" data-id="${p.id}">${esc(p.name)}</a></div>
+    <div class="steps"><span class="${idx === 0 ? 'on' : 'done'}">办理中</span><span class="${idx === 1 ? 'on' : idx > 1 ? 'done' : ''}">对方已回应</span><span class="${idx === 2 ? 'on' : ''}">已关闭</span></div>
+    ${i.state !== 'closed' ? `<div>现在卡在:<b>${i.state === 'claimed' ? '负责人(等你核实)' : PN[i.holder]}</b> · 已 ${Logic.days(S,i)} 天 · 期限第 ${i.due} 天${od ? ` <span class="badge b-red">超期 ${od} 天</span>` : ''}</div>` : ''}</div>
+  ${bl.length || dnItems.length || dnPay.length ? `<div class="card"><h2>它和别的事的关系</h2>
+    ${bl.length ? `<div><b>它在等:</b>${bl.map(b => `<a href="#" data-act="openitem" data-id="${b.id}">${esc(b.title)}</a>`).join('、')}</div>` : ''}
+    ${dnItems.length ? `<div style="margin-top:8px"><b>它不解决,会拖住:</b><ul>${dnItems.map(x => `<li>${esc(x.title)}</li>`).join('')}</ul></div>` : ''}
+    ${dnPay.length ? `<div><b>牵连的收款:</b>${dnPay.map(x => `${x.name} ${money(p.contract * x.pct / 100)}`).join('、')}</div>` : ''}</div>` : ''}
+  <div class="card"><h2>你来处理</h2>${actionsHtml(i)}</div>
+  <div class="card"><h2>这件事的记录</h2>${logs.length ? `<ul class="log">${logs.map(l => `<li><span class="mu">第${l.day}天</span> <b>${esc(l.actor)}</b>:${esc(l.text)}</li>`).join('')}</ul>` : '<div class="mu">还没有记录。</div>'}</div>`;
+}
+
+/* ---------- 新建事项(一个表单装下所有情况) ---------- */
+function sel(key, opts, cur){ return `<select data-form="${key}">${opts.map(([v,l]) => `<option value="${esc(v)}" ${String(cur) === String(v) ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`; }
+function pNew(){
+  const f = ui.form; const pid = f.pid || S.projects[0].id;
+  const openItems = S.items.filter(i => i.pid === pid && i.state !== 'closed');
+  return `<div class="back"><button data-act="goto" data-page="${ui.pid ? 'project' : 'home'}">← 返回</button></div>
+  <div class="card"><h1>新建事项</h1><div class="mu">不管什么情况,都用同一张表:什么事、谁来办、几天内、会拖住谁。</div>
+    <h2>常见情况(点一下自动填好)</h2>
+    <div class="row" style="margin-bottom:6px">${Logic.PRESETS.map((x,k) => `<button class="chip" data-act="preset" data-k="${k}">${x.name}</button>`).join('')}</div>
+    <h2>填写</h2>
+    <div class="f"><div class="mu">哪个项目</div>${sel('pid', S.projects.map(p => [p.id,p.name]), pid)}</div>
+    <div class="f"><div class="mu">是什么事</div><input type="text" data-form="title" value="${esc(f.title || '')}" placeholder="一句话说清楚"></div>
+    <div class="grid2">
+      <div class="f"><div class="mu">类型</div>${sel('kind', Logic.KINDS.map(k => [k,k]), f.kind || '其他')}</div>
+      <div class="f"><div class="mu">谁来办</div>${sel('holder', Object.entries(PN), f.holder || 'construction')}</div>
+      <div class="f"><div class="mu">几天内要办完</div><input type="number" data-form="due" value="${esc(f.due ?? '7')}"></div>
+      <div class="f"><div class="mu">它会拖住哪件事(可不选)</div>${sel('blocks', [['','不拖住别的事'], ...openItems.map(i => [i.id, i.title])], f.blocks || '')}</div></div>
+    <label class="row" style="margin-bottom:14px"><input type="checkbox" data-form="redline" ${f.redline ? 'checked' : ''}> 设为红线(没解决前永远排在最前面)</label>
+    <button class="pri" data-act="createitem">创建</button></div>`;
+}
+
+/* ---------- 操作记录 ---------- */
+function pHistory(){
+  return `<div class="card"><h1>操作记录</h1><div class="mu" style="margin-bottom:10px">谁、哪天、做了什么。只增不改。</div>` +
+    (S.log.length ? `<ul class="log">${S.log.slice().reverse().map(l => `<li><span class="mu">第${l.day}天</span> <b>${esc(l.actor)}</b>:${esc(l.text)}</li>`).join('')}</ul>` : '<div class="mu">还没有记录。</div>') + `</div>`;
+}
+
+/* ---------- 外部协作方(点链接,不用账号) ---------- */
+function pExternal(){
+  const role = ui.role;
+  const i = ui.itemId && it_(ui.itemId);
+  if (i && i.holder === role) return pLink(i);
+  const mine = S.items.filter(x => x.holder === role && x.token && x.state === 'open');
+  const h = hint();
+  return `<div class="ext">
+    <div class="card" style="background:#fff8e1;border-color:#fde4a3"><div class="mu" style="color:#7c4a03">你现在是「${PN[role]}」。只能看到发给你的事,不需要账号。<br>现实中是负责人把链接发到微信,对方点开就用。</div></div>
+    ${h ? `<div class="hint">👉 ${h}</div>` : ''}
+    <h2>需要你处理</h2>
+    ${mine.length ? mine.map(x => `<div class="task act" data-act="openlink" data-id="${x.id}"><div><b>${esc(x.title)}</b><span class="mu">${esc(pj(x.pid).name)}</span></div><button class="pri" data-act="openlink" data-id="${x.id}">打开</button></div>`).join('')
+      : '<div class="empty" style="color:var(--mu);background:#fafbfc">暂时没有需要你处理的事</div>'}</div>`;
+}
+function pLink(i){
+  return `<div class="ext"><div class="url">https://console.example/t/${i.token}</div><div class="card"><h3>${esc(i.title)}</h3>
+    <div class="mu">${esc(pj(i.pid).name)} · 期限第 ${i.due} 天</div>
+    ${i.rejectReason ? `<div class="notice n-no" style="margin-top:10px">上次被驳回:${esc(i.rejectReason)}</div>` : ''}
+    <div class="f" style="margin-top:12px"><div class="mu">说明(做完了写情况;做不了必须写原因)</div><input type="text" id="f-note" placeholder="例如:已完成,照片已传"></div>
+    <div class="row"><button class="pri" data-act="done" data-id="${i.id}" data-token="${i.token}">我做完了</button><button class="danger" data-act="back" data-id="${i.id}" data-token="${i.token}">做不了 / 有问题</button></div>
+    <div class="mu" style="margin-top:10px">你提交的只算"声称",负责人核实后才作数。</div>
+    <div style="margin-top:12px"><button data-act="closelink">返回</button></div></div></div>`;
+}
+
+/* ---------- 渲染与事件 ---------- */
+function render(){
+  const owner = ui.role === 'owner';
+  $('top').innerHTML = `<div class="brand" data-act="goto" data-page="home">💡 照明工程管控台</div>` +
+    (owner ? `<div class="menu"><button class="${ui.page !== 'history' ? 'on' : ''}" data-act="goto" data-page="home">总览</button><button class="${ui.page === 'history' ? 'on' : ''}" data-act="goto" data-page="history">操作记录</button></div>` : '') +
+    `<div class="who"><span class="lab">第 ${S.today} 天</span><button data-act="day">推进一天</button><span class="lab">视角:</span>
+     <div class="seg">${ROLE_ORDER.map(k => `<button class="${ui.role === k ? 'sel' : ''}" data-act="role" data-r="${k}">${PN[k]}</button>`).join('')}</div><button data-act="reset">重置</button></div>`;
+  const note = S.notice ? `<div class="notice ${S.notice.ok ? 'n-ok' : 'n-no'}">${esc(S.notice.text)}</div>` : '';
+  const pg = !owner ? pExternal() : ({home:pHome, project:pProject, item:pItem, new:pNew, history:pHistory}[ui.page] || pHome)();
+  $('main').innerHTML = note + pg;
+  saveUi();
+}
+
+function formSet(e){
+  const k = e.target.dataset && e.target.dataset.form; if (!k) return false;
+  ui.form[k] = e.target.type === 'checkbox' ? e.target.checked : e.target.value; saveUi(); return k;
+}
+document.addEventListener('input', e => { formSet(e); });
+document.addEventListener('change', e => { const k = formSet(e); if (k === 'pid'){ ui.form.blocks = ''; render(); } });
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  if (el.tagName === 'A') e.preventDefault();
+  const d = el.dataset, a = d.act;
+  if (a === 'role'){ ui.role = d.r; ui.itemId = null; S.notice = null; }
+  else if (a === 'goto'){ ui.page = d.page; if (d.page === 'home') ui.pid = null; S.notice = null; window.scrollTo(0,0); }
+  else if (a === 'filter') ui.filter = d.k;
+  else if (a === 'togglecalm') ui.showCalm = !ui.showCalm;
+  else if (a === 'toggledone') ui.showDone = !ui.showDone;
+  else if (a === 'openproj'){ ui.pid = d.id; ui.page = 'project'; S.notice = null; window.scrollTo(0,0); }
+  else if (a === 'openitem'){ ui.itemId = d.id; ui.page = 'item'; S.notice = null; window.scrollTo(0,0); }
+  else if (a === 'newitem'){ ui.form = Object.assign({}, ui.form, {pid:d.pid || ui.pid || S.projects[0].id, title:'', kind:'其他', holder:'construction', due:'7', blocks:'', redline:false}); ui.page = 'new'; S.notice = null; window.scrollTo(0,0); }
+  else if (a === 'preset'){ const p = Logic.PRESETS[+d.k]; Object.assign(ui.form, {title:p.title, kind:p.kind, holder:p.holder}); }
+  else if (a === 'createitem'){
+    const f = ui.form; D({type:'CREATE_ITEM', pid:f.pid || S.projects[0].id, title:f.title, kind:f.kind || '其他', holder:f.holder || 'construction', due:f.due ?? 7, blocks:f.blocks, redline:f.redline});
+    if (S.notice.ok){ ui.itemId = S.createdId; ui.page = 'item'; ui.form = {}; }
+  }
+  else if (a === 'addproj'){
+    const f = ui.form; D({type:'ADD_PROJECT', name:f.np_name, contract:f.np_contract || 300000, high:f.np_high});
+    if (S.notice.ok){ ui.pid = S.createdProject; ui.page = 'project'; ui.form.np_name = ''; }
+  }
+  else if (a === 'handoff') D({type:'HANDOFF', id:d.id, to:d.to || val('f-to'), actor:'负责人'});
+  else if (a === 'confirm') D({type:'CONFIRM', id:d.id});
+  else if (a === 'reject') D({type:'REJECT', id:d.id, reason:val('f-reason')});
+  else if (a === 'receive') D({type:'RECEIVE_PAYMENT', payId:d.pay});
+  else if (a === 'day') D({type:'ADVANCE_DAY'});
+  else if (a === 'openlink'){ ui.itemId = d.id; S.notice = null; }
+  else if (a === 'closelink') ui.itemId = null;
+  else if (a === 'done'){ D({type:'RESPOND_DONE', id:d.id, token:d.token, note:val('f-note')}); if (S.notice.ok) ui.itemId = null; }
+  else if (a === 'back'){ D({type:'RESPOND_BACK', id:d.id, token:d.token, reason:val('f-note')}); if (S.notice.ok) ui.itemId = null; }
+  else if (a === 'reset'){ if (!confirm('确定重置所有演示数据吗?')) return; S = Logic.initial(); saveState(); ui.page = 'home'; ui.pid = null; ui.itemId = null; ui.role = 'owner'; ui.form = {}; }
+  render();
+});
+window.addEventListener('storage', e => { if (e.key === KEY){ S = loadState(); render(); } });
+render();
+</script>
+</body>
+</html>

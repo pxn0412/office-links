@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>我的待办</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.6 -apple-system,"Microsoft YaHei",sans-serif;background:#f6f7f9;color:#1d2430}
+header{background:#fff;padding:12px 20px;border-bottom:1px solid #d9dde3;display:flex;gap:16px;align-items:baseline;flex-wrap:wrap}
+header b{font-size:18px} header span{color:#5f6b7a;font-size:13px}
+.wrap{display:flex;align-items:flex-start;gap:16px;padding:16px 20px;max-width:1180px;margin:0 auto}
+.side{width:300px;flex:none;position:sticky;top:12px}
+.main{flex:1;min-width:0}
+.grp{margin:14px 4px 6px;color:#5f6b7a;font-size:12px;letter-spacing:.05em}
+.grp:first-child{margin-top:0}
+.it{display:flex;justify-content:space-between;align-items:center;gap:8px;background:#fff;border:1px solid #d9dde3;border-radius:10px;padding:10px 12px;margin-bottom:6px;cursor:pointer}
+.it:hover{border-color:#90a4c0}
+.it.sel{border-color:#1565c0;box-shadow:0 0 0 2px #e3f2fd}
+.it b{font-weight:600}
+.c{background:#fff;border:1px solid #d9dde3;border-radius:12px;padding:18px 20px;margin-bottom:12px}
+.c h3{margin:0 0 6px;font-size:18px}
+.m{color:#5f6b7a;font-size:13px}
+.p{display:inline-block;padding:0 10px;border-radius:10px;font-size:12px;border:1px solid;white-space:nowrap}
+.blocked{color:#c62828;border-color:#c62828;background:#ffebee}
+.doing{color:#1565c0;border-color:#1565c0;background:#e3f2fd}
+.affected{color:#e65100;border-color:#e65100;background:#fff3e0}
+.todo{color:#616161;border-color:#b9bfc9;background:#f3f3f3}
+.done{color:#2e7d32;border-color:#2e7d32;background:#e8f5e9}
+button{font:inherit;padding:8px 14px;border:1px solid #b7bec9;background:#fff;border-radius:8px;margin:6px 6px 0 0;cursor:pointer}
+button.pri{background:#1565c0;color:#fff;border-color:#1565c0}
+button.bad{color:#c62828;border-color:#e3a6a6}
+input,select{font:inherit;padding:8px;border:1px solid #b7bec9;border-radius:8px;width:100%;margin-top:6px;background:#fff}
+.w{background:#fff8e1;border-radius:8px;padding:8px 12px;margin-top:10px;font-size:14px}
+.o{border-top:1px dashed #d9dde3;margin-top:14px;padding-top:10px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.empty{color:#5f6b7a;padding:40px 10px;text-align:center}
+@media (max-width:820px){.wrap{flex-direction:column;padding:10px}.side{width:100%;position:static}.row2{grid-template-columns:1fr}}
+</style></head><body>
+<header><b id="proj">加载中</b><span id="who"></span></header>
+<div class="wrap"><div class="side" id="side"></div><div class="main" id="main"></div></div>
+<script>
+const token = location.pathname.split('/').pop();
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = s => { if (!s) return '未约定'; const p = s.split('-'); return Number(p[1]) + '月' + Number(p[2]) + '日'; };
+const $ = id => document.getElementById(id);
+const v = id => $(id).value;
+let view = null, busy = false, sel = null, last = '';
+
+function load(force) {
+  if (busy) return;
+  fetch('/api/m/' + token).then(r => r.json()).then(x => {
+    if (x.error) { $('main').innerHTML = '<div class="c">' + esc(x.error) + '</div>'; return; }
+    const j = JSON.stringify(x);
+    if (!force && j === last) return;               // 没变化就不重画,避免冲掉正在填的内容
+    if (document.activeElement && /INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName) && !force) return;
+    last = j; view = x; draw();
+  }).catch(() => {});
+}
+function post(body) {
+  busy = true;
+  return fetch('/api/m/' + token + '/act', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+    .then(r => r.json()).then(r => { busy = false; if (!r.ok) alert(r.error || '没有成功,请再试一次'); load(true); })
+    .catch(() => { busy = false; alert('网络不通'); });
+}
+
+// ---------- 左边:我的清单 ----------
+function items() {
+  const out = [];
+  const ORD = { late: 0, today: 1, soon: 2, ask: 3 };
+  const todoMap = {}; view.todo.forEach(x => { todoMap[x.t] = x; });
+  view.assigned.forEach(i => out.push({ key: 'issue:' + i.id, grp: '请你处理', title: i.task, tag: i.kind, cls: 'affected' }));
+  const tasks = view.tasks.slice().sort((a, b) => {
+    const A = todoMap[a.id] ? ORD[todoMap[a.id].kind] : 9, B = todoMap[b.id] ? ORD[todoMap[b.id].kind] : 9; return A - B;
+  });
+  tasks.forEach(t => {
+    const td = todoMap[t.id];
+    let tag = t.label, cls = t.status;
+    if (td) { tag = td.label + (td.kind === 'late' ? ' ' + (-td.days) + ' 天' : ''); cls = td.kind === 'late' ? 'blocked' : td.kind === 'ask' ? 'todo' : 'affected'; }
+    if (t.reported) { tag = '等负责人确认'; cls = 'doing'; }
+    out.push({ key: 'task:' + t.id, grp: '我的任务', title: t.name, tag, cls });
+  });
+  const unread = view.msgs.filter(m => !m.read).length;
+  out.push({ key: 'msgs', grp: '消息', title: '收到的消息', tag: unread ? unread + ' 条新' : '', cls: 'blocked' });
+  if (view.mine.length) out.push({ key: 'mine', grp: '我报的问题', title: '处理进展', tag: view.mine.length + ' 个', cls: 'doing' });
+  out.push({ key: 'report', grp: '其他', title: '上报一个问题', tag: '', cls: '' });
+  return out;
+}
+function drawSide(list) {
+  let h = '', g = '';
+  list.forEach(x => {
+    if (x.grp !== g) { g = x.grp; h += '<div class="grp">' + esc(g) + '</div>'; }
+    h += '<div class="it' + (x.key === sel ? ' sel' : '') + '" data-sel="' + esc(x.key) + '"><b>' + esc(x.title) + '</b>' + (x.tag ? '<span class="p ' + x.cls + '">' + esc(x.tag) + '</span>' : '') + '</div>';
+  });
+  if (view.done.length) h += '<div class="grp">已完成</div><div class="m" style="margin:0 4px">' + view.done.map(esc).join('、') + '</div>';
+  $('side').innerHTML = h;
+}
+
+// ---------- 右边:详情 ----------
+function taskCard(t) {
+  let h = '<div class="c"><h3>' + esc(t.name) + '</h3><span class="p ' + esc(t.status) + '">' + esc(t.label) + '</span> <span class="m">约定 ' + fmt(t.promised) + '</span>';
+  h += '<div class="m" style="margin-top:8px">要交:' + esc(t.deliver) + '</div>';
+  if (t.reported) return h + '<div class="w">你已报完成,等负责人确认。</div></div>';
+  if (t.waitingChoice) return h + '<div class="w">方案已交给负责人,等他选择。</div></div>';
+  if (t.pendingDate) h += '<div class="w">你报的新日期 ' + fmt(t.pendingDate) + ',等负责人确认。</div>';
+  if (t.problem) h += '<div class="w">你报的问题:' + esc(t.problem) + '</div>';
+  h += '<div class="o"><button class="pri" data-do="done" data-t="' + t.id + '">做完了</button></div>';
+  h += '<div class="o"><span class="m">改完成日期</span><input type="date" id="d' + t.id + '"><button data-do="chg" data-t="' + t.id + '">提交新日期</button></div>';
+  if (!t.problem) h += '<div class="o"><span class="m">遇到问题</span><input type="text" id="r' + t.id + '" maxlength="100" placeholder="一句话说清楚"><button class="bad" data-do="prob" data-t="' + t.id + '">报告问题</button></div>';
+  if (t.canPropose) {
+    h += '<div class="o"><span class="m">给负责人两个办法(影响请你自己填)</span>';
+    [1, 2].forEach(i => {
+      h += '<div style="margin-top:8px"><input type="text" id="t' + t.id + '_' + i + '" maxlength="60" placeholder="办法' + i + '"><input type="text" id="i' + t.id + '_' + i + '" maxlength="60" placeholder="预估影响,如 多花2万 / 晚7天">' +
+        '<div class="row2"><label class="m">最晚决定日<input type="date" id="x' + t.id + '_' + i + '"></label><label class="m">新交期<input type="date" id="n' + t.id + '_' + i + '"></label></div></div>';
+    });
+    h += '<button class="pri" data-do="prop" data-t="' + t.id + '">提交办法</button></div>';
+  }
+  return h + '</div>';
+}
+function issueCard(i) {
+  let h = '<div class="c" style="border-color:#e65100"><h3>请你处理:' + esc(i.task) + '</h3><span class="p affected">' + esc(i.kind) + '</span>';
+  h += '<div style="margin-top:8px">' + esc(i.text) + ' <span class="m">(' + esc(i.by) + '报的)</span></div>';
+  if (i.note) h += '<div class="w">负责人要求:' + esc(i.note) + '</div>';
+  h += '<div class="o"><span class="m">处理结果(一句话)</span><input type="text" id="rt' + i.id + '" maxlength="100" placeholder="例如:已换现货,6月18日到">';
+  h += '<span class="m">新的完成日(没有可不填)</span><input type="date" id="rd' + i.id + '"><button class="pri" data-do="reply" data-i="' + i.id + '">提交处理结果</button></div></div>';
+  return h;
+}
+function drawMain() {
+  let h = '';
+  if (!sel) h = '<div class="empty">左边没有要你做的事。</div>';
+  else if (sel.indexOf('task:') === 0) { const t = view.tasks.find(x => 'task:' + x.id === sel); h = t ? taskCard(t) : '<div class="empty">这件事已经处理完了。</div>'; }
+  else if (sel.indexOf('issue:') === 0) { const i = view.assigned.find(x => 'issue:' + x.id === sel); h = i ? issueCard(i) : '<div class="empty">这个问题已经处理完了。</div>'; }
+  else if (sel === 'msgs') {
+    const unread = view.msgs.filter(m => !m.read).length;
+    h = '<div class="c"><h3>收到的消息</h3>';
+    if (!view.msgs.length) h += '<div class="m">还没有消息。</div>';
+    view.msgs.forEach(m => { h += '<div class="w" style="' + (m.read ? 'opacity:.6' : '') + '"><span class="m">' + esc(m.at) + '</span> ' + esc(m.text) + '</div>'; });
+    if (unread) h += '<button class="pri" data-do="read">全部标为已读</button>';
+    h += '</div>';
+  } else if (sel === 'mine') {
+    h = '<div class="c"><h3>我报的问题</h3>';
+    view.mine.forEach(i => { h += '<div class="w">' + esc(i.task) + ':' + esc(i.text) + '<br><b>' + esc(i.status) + '</b>' + (i.assignee ? '(' + esc(i.assignee) + ' 处理)' : '') + '</div>'; });
+    h += '</div>';
+  } else if (sel === 'report') {
+    h = '<div class="c"><h3>上报一个问题</h3><span class="m">交货、施工风险、资金,都可以在这里报。负责人会看到,并通知受影响的人。</span>';
+    h += '<select id="ik">' + view.kinds.map(k => '<option>' + esc(k) + '</option>').join('') + '</select>';
+    h += '<select id="it"><option value="0">不针对某个任务</option>' + view.myTasks.map(t => '<option value="' + t.id + '">' + esc(t.name) + '</option>').join('') + '</select>';
+    h += '<input type="text" id="ix" maxlength="100" placeholder="一句话说清楚"><button class="bad" data-do="issue">上报</button></div>';
+  }
+  $('main').innerHTML = h;
+}
+function draw() {
+  $('proj').textContent = view.project;
+  $('who').textContent = '你是:' + view.role + ' · 日期 ' + view.today + '(模拟)';
+  const list = items();
+  if (!sel || !list.some(x => x.key === sel)) sel = list[0].key;        // 默认打开最紧急的一件
+  drawSide(list); drawMain();
+}
+
+// ---------- 点击 ----------
+document.addEventListener('click', e => {
+  const s = e.target.closest('[data-sel]');
+  if (s) { sel = s.dataset.sel; draw(); return; }
+  const b = e.target.closest('[data-do]'); if (!b) return;
+  const t = Number(b.dataset.t), a = b.dataset.do;
+  if (a === 'read') return post({ type: 'read' });
+  if (a === 'done') { if (confirm('确认已经完成?')) post({ type: 'done', t }); return; }
+  if (a === 'chg') { const d = v('d' + t); if (!d) return alert('先选日期'); return post({ type: 'date', t, date: d }); }
+  if (a === 'prob') { const r = v('r' + t).trim(); if (!r) return alert('先写一下问题'); return post({ type: 'problem', t, reason: r }); }
+  if (a === 'prop') {
+    const options = [1, 2].map(i => ({ text: v('t' + t + '_' + i).trim(), impact: v('i' + t + '_' + i).trim(), deadline: v('x' + t + '_' + i) || null, newDate: v('n' + t + '_' + i) || null }));
+    if (!options.some(o => o.text)) return alert('至少写一个办法');
+    return post({ type: 'propose', t, options });
+  }
+  if (a === 'reply') { const id = b.dataset.i, x = v('rt' + id).trim(); if (!x) return alert('先写一下处理结果'); return post({ type: 'reply', issue: id, text: x, date: v('rd' + id) || null }); }
+  if (a === 'issue') { const x = v('ix').trim(); if (!x) return alert('先写一下问题'); return post({ type: 'issue', kind: v('ik'), t: Number(v('it')), text: x }); }
+});
+load(true); setInterval(() => load(false), 3000);
+</script></body></html>
