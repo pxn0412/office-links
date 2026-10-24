@@ -6,9 +6,12 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const PORT = Number(process.argv[2]) || 3000;
+const PORT = Number(process.env.PORT) || Number(process.argv[2]) || 3000;
 const DIR = __dirname;
-const DATA = path.join(DIR, 'data.json');
+const DATA = process.env.DATA_FILE || path.join(DIR, 'data.json');
+// 公开演示模式(DEMO=1):链接和密钥固定,首页是入口页,任何人都能进来试。只放模拟数据。
+const DEMO = process.env.DEMO === '1';
+const DEMO_KEY = 'demo-owner';
 
 // 逻辑只有一份:直接从负责人页面里取出来用
 const html = fs.readFileSync(path.join(DIR, '负责人页面-v4.html'), 'utf8');
@@ -18,7 +21,7 @@ const L = new Function(/\/\*LOGIC_START\*\/([\s\S]*?)\/\*LOGIC_END\*\//.exec(htm
 let db;
 function newTokens(state) {
   const tokens = {};
-  state.projects.forEach(p => ['supplier', 'builder', 'customer'].forEach(r => { tokens[crypto.randomBytes(9).toString('hex')] = { p: p.id, role: r }; }));
+  state.projects.forEach(p => ['supplier', 'builder', 'customer'].forEach(r => { tokens[DEMO ? 'demo' + p.id + r : crypto.randomBytes(9).toString('hex')] = { p: p.id, role: r }; }));
   return tokens;
 }
 // 新建项目后,给新项目补发链接(已有项目的链接不变)
@@ -30,13 +33,14 @@ function addMissingTokens(state) {
 }
 function load() {
   try { db = JSON.parse(fs.readFileSync(DATA, 'utf8')); } catch (e) { db = null; }
+  if (DEMO && db && db.ownerKey !== DEMO_KEY) db = null;   // 公开演示只用固定密钥,旧的随机密钥不沿用
   if (!db || !db.state) {
     const state = L.seed();
-    db = { rev: 1, ownerKey: crypto.randomBytes(8).toString('hex'), state, tokens: newTokens(state) };
+    db = { rev: 1, ownerKey: DEMO ? DEMO_KEY : crypto.randomBytes(8).toString('hex'), state, tokens: newTokens(state) };
     save();
   }
 }
-function save() { fs.writeFileSync(DATA, JSON.stringify(db)); }
+function save() { try { fs.writeFileSync(DATA, JSON.stringify(db)); } catch (e) { /* 云上磁盘不可写时只保留在内存里 */ } }
 
 // ---------- 工具 ----------
 function send(res, code, obj) { res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }); res.end(JSON.stringify(obj)); }
@@ -86,6 +90,7 @@ const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
     const p = url.pathname;
 
+    if (DEMO && req.method === 'GET' && p === '/' && !url.searchParams.get('k')) return sendHtml(res, landing());
     if (req.method === 'GET' && (p === '/' || p === '/index.html')) return sendHtml(res, fs.readFileSync(path.join(DIR, '负责人页面-v4.html'), 'utf8'));
     if (req.method === 'GET' && /^\/m\/\w+$/.test(p)) return sendHtml(res, workbench());
 
@@ -98,7 +103,8 @@ const server = http.createServer(async (req, res) => {
       if (!isOwner(req)) return send(res, 401, {});
       const links = {};
       Object.keys(db.tokens).forEach(t => { const x = db.tokens[t]; (links[x.p] = links[x.p] || {})[x.role] = t; });
-      return send(res, 200, { base: 'http://' + req.headers.host, links });
+      const proto = String(req.headers['x-forwarded-proto'] || 'http').split(',')[0];
+      return send(res, 200, { base: proto + '://' + req.headers.host, links });
     }
     if (p === '/api/act' && req.method === 'POST') {
       if (!isOwner(req)) return send(res, 401, {});
@@ -147,6 +153,24 @@ const server = http.createServer(async (req, res) => {
     send(res, 400, { error: '请求有误' });
   }
 });
+
+// ---------- 公开演示的入口页(只在 DEMO=1 时出现) ----------
+function landing() {
+  const names = { A: 'A 酒店', B: 'B 工厂', C: 'C 学校' };
+  const roles = { supplier: '供应商', builder: '施工方', customer: '客户' };
+  const rows = ['A', 'B', 'C'].map(id => '<tr><td>' + names[id] + '</td>' + ['supplier', 'builder', 'customer'].map(r => '<td><a href="/m/demo' + id + r + '" target="_blank">' + roles[r] + '</a></td>').join('') + '</tr>').join('');
+  return '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>工程项目指挥台 · 演示</title><style>' +
+    'body{margin:0;font:16px/1.7 -apple-system,"Microsoft YaHei",sans-serif;background:#f6f7f9;color:#1d2430}.w{max-width:760px;margin:0 auto;padding:32px 20px}' +
+    'h1{margin:0 0 4px}.m{color:#5f6b7a}.c{background:#fff;border:1px solid #d9dde3;border-radius:12px;padding:18px 20px;margin-top:16px}' +
+    'a.b{display:inline-block;background:#1565c0;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;margin-top:8px}' +
+    'table{border-collapse:collapse;width:100%}td{padding:8px 6px;border-top:1px solid #eceff3}ol{padding-left:20px;margin:6px 0}</style></head><body><div class="w">' +
+    '<h1>工程项目指挥台</h1><div class="m">一个人管多个工程项目:供应商一报延期,系统算出哪些施工和付款受影响,通知相关的人。</div>' +
+    '<div class="c"><b>先看全局</b><div class="m">你是项目负责人。A 酒店的采购备货晚了 3 天,B 工厂的验收款逾期。</div><a class="b" href="/?k=' + DEMO_KEY + '" target="_blank">打开负责人页面</a></div>' +
+    '<div class="c"><b>再看对方</b><div class="m">供应商、施工方、客户各有一个页面,只看到自己的事。</div><table>' + rows + '</table></div>' +
+    '<div class="c"><b>建议这样试(两分钟)</b><ol><li>打开 A 酒店的「供应商」页面,点「改完成日期」,提交一个新日期</li><li>回到负责人页面,看 A 酒店有没有变化</li><li>在供应商页面「上报一个问题」,负责人页面会出现处理入口</li></ol></div>' +
+    '<div class="c m">这是公开演示:数据是模拟的,没有登录,所有访客共用同一份数据,可能被别人改过。负责人页面右上角「重置演示数据」可以回到初始状态。</div>' +
+    '</div></body></html>';
+}
 
 // ---------- 对方的工作台(电脑和手机都能用,页面在 工作台.html) ----------
 const workbench = () => fs.readFileSync(path.join(DIR, '工作台.html'), 'utf8');

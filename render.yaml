@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: project-command-desk
+    runtime: node
+    plan: free
+    buildCommand: echo no build
+    startCommand: node server.js
+    envVars:
+      - key: DEMO
+        value: "1"
+      - key: DATA_FILE
+        value: /tmp/data.json

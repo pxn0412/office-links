@@ -1,0 +1,8 @@
+{
+  "name": "project-command-desk",
+  "version": "0.1.0",
+  "description": "工程项目指挥台:一个人管多个工程项目的协作台(演示原型)",
+  "private": true,
+  "scripts": { "start": "node server.js", "test": "node test-v4.js && node test-issue.js" },
+  "engines": { "node": ">=18" }
+}
