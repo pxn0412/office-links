@@ -33,6 +33,26 @@ input,select{font:inherit;padding:8px;border:1px solid #b7bec9;border-radius:8px
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .empty{color:#5f6b7a;padding:40px 10px;text-align:center}
 @media (max-width:820px){.wrap{flex-direction:column;padding:10px}.side{width:100%;position:static}.row2{grid-template-columns:1fr}}
+/* ===== 视觉升级(只改样式,不动逻辑) ===== */
+html{background:#f4f6fb}
+body{min-height:100vh;background:radial-gradient(1000px 360px at 50% -100px,#e4ecff 0,rgba(228,236,255,0) 70%) no-repeat,#f4f6fb;font-family:"Segoe UI","PingFang SC","Microsoft YaHei",-apple-system,sans-serif}
+header{background:linear-gradient(100deg,#0f1b2d,#18305a);border-bottom:0;padding:14px 28px;box-shadow:0 4px 18px rgba(15,27,45,.25);align-items:center;color:#fff}
+header b{color:#fff;font-size:18px;letter-spacing:.04em;display:flex;align-items:center;gap:10px}
+header b::before{content:"";width:24px;height:24px;border-radius:8px;background:conic-gradient(from 210deg,#ffd54a,#ff8a3d,#ff5d73,#6a5cff,#1f6feb,#ffd54a);box-shadow:0 0 0 3px rgba(255,255,255,.12),0 0 14px rgba(255,190,70,.55)}
+header span{color:#9db4e0;border:1px solid #3a5288;border-radius:12px;padding:0 10px}
+.wrap{padding:22px 24px}
+.grp{font-weight:600;letter-spacing:.08em;display:flex;align-items:center;gap:6px}
+.grp::before{content:"";width:3px;height:12px;border-radius:2px;background:linear-gradient(180deg,#1f6feb,#6a5cff)}
+.it{border:0;border-radius:12px;box-shadow:0 1px 2px rgba(15,27,45,.06),0 4px 12px rgba(15,27,45,.05);transition:.15s}
+.it:hover{transform:translateX(2px);box-shadow:0 2px 4px rgba(15,27,45,.08),0 8px 20px rgba(15,27,45,.1)}
+.it.sel{box-shadow:0 0 0 2px #1f6feb,0 8px 20px rgba(31,111,235,.18);background:linear-gradient(90deg,#eef4ff,#fff)}
+.c{border:0;border-radius:16px;padding:22px 24px;box-shadow:0 1px 2px rgba(15,27,45,.06),0 8px 24px rgba(15,27,45,.08)}
+.c h3{font-size:20px}
+button{border-radius:10px;transition:.15s}
+button.pri{background:linear-gradient(135deg,#1f6feb,#6a5cff);border-color:transparent;box-shadow:0 3px 10px rgba(63,102,235,.3)}
+button.pri:hover{transform:translateY(-1px)}
+.w{background:linear-gradient(90deg,#fff3cf,#fff8e1);border-left:4px solid #f2b705}
+.p{padding:0 11px}
 </style></head><body>
 <header><b id="proj">加载中</b><span id="who"></span></header>
 <div class="wrap"><div class="side" id="side"></div><div class="main" id="main"></div></div>

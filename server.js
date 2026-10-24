@@ -156,20 +156,7 @@ const server = http.createServer(async (req, res) => {
 
 // ---------- 公开演示的入口页(只在 DEMO=1 时出现) ----------
 function landing() {
-  const names = { A: 'A 酒店', B: 'B 工厂', C: 'C 学校' };
-  const roles = { supplier: '供应商', builder: '施工方', customer: '客户' };
-  const rows = ['A', 'B', 'C'].map(id => '<tr><td>' + names[id] + '</td>' + ['supplier', 'builder', 'customer'].map(r => '<td><a href="/m/demo' + id + r + '" target="_blank">' + roles[r] + '</a></td>').join('') + '</tr>').join('');
-  return '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>工程项目指挥台 · 演示</title><style>' +
-    'body{margin:0;font:16px/1.7 -apple-system,"Microsoft YaHei",sans-serif;background:#f6f7f9;color:#1d2430}.w{max-width:760px;margin:0 auto;padding:32px 20px}' +
-    'h1{margin:0 0 4px}.m{color:#5f6b7a}.c{background:#fff;border:1px solid #d9dde3;border-radius:12px;padding:18px 20px;margin-top:16px}' +
-    'a.b{display:inline-block;background:#1565c0;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;margin-top:8px}' +
-    'table{border-collapse:collapse;width:100%}td{padding:8px 6px;border-top:1px solid #eceff3}ol{padding-left:20px;margin:6px 0}</style></head><body><div class="w">' +
-    '<h1>工程项目指挥台</h1><div class="m">一个人管多个工程项目:供应商一报延期,系统算出哪些施工和付款受影响,通知相关的人。</div>' +
-    '<div class="c"><b>先看全局</b><div class="m">你是项目负责人。A 酒店的采购备货晚了 3 天,B 工厂的验收款逾期。</div><a class="b" href="/?k=' + DEMO_KEY + '" target="_blank">打开负责人页面</a></div>' +
-    '<div class="c"><b>再看对方</b><div class="m">供应商、施工方、客户各有一个页面,只看到自己的事。</div><table>' + rows + '</table></div>' +
-    '<div class="c"><b>建议这样试(两分钟)</b><ol><li>打开 A 酒店的「供应商」页面,点「改完成日期」,提交一个新日期</li><li>回到负责人页面,看 A 酒店有没有变化</li><li>在供应商页面「上报一个问题」,负责人页面会出现处理入口</li></ol></div>' +
-    '<div class="c m">这是公开演示:数据是模拟的,没有登录,所有访客共用同一份数据,可能被别人改过。负责人页面右上角「重置演示数据」可以回到初始状态。</div>' +
-    '</div></body></html>';
+  return fs.readFileSync(path.join(DIR, '入口页.html'), 'utf8').replace('__KEY__', DEMO_KEY);
 }
 
 // ---------- 对方的工作台(电脑和手机都能用,页面在 工作台.html) ----------
